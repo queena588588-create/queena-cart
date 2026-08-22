@@ -52,20 +52,41 @@ async function getProductsFromGas() {
 async function handleProductShare(request) {
   const url = new URL(request.url);
 
+   const rowMatch =
+    url.pathname.match(/^\/p\/(\d+)$/);
+
+  const productRow =
+    rowMatch ? Number(rowMatch[1]) : 0;
+
   const productName =
     String(url.searchParams.get('name') || '').trim();
 
-  if (!productName) {
-    return Response.redirect(url.origin + '/', 302);
+  if (!productRow && !productName) {
+    return Response.redirect(
+      url.origin + '/',
+      302
+    );
   }
 
   const products = await getProductsFromGas();
 
-  const product = products.find(function (item) {
+    const product = products.find(function (item) {
+
+    if (productRow) {
+      return Number(item.row) === productRow;
+    }
+
     return String(item.name || '').trim() === productName;
   });
+    if (!product) {
 
-  if (!product) {
+    if (!productName) {
+      return Response.redirect(
+        url.origin + '/',
+        302
+      );
+    }
+
     return Response.redirect(
       url.origin +
         '/?product=' +
@@ -89,10 +110,12 @@ async function handleProductShare(request) {
     '/?product=' +
     encodeURIComponent(title);
 
-  const shareUrl =
+    const shareUrl =
     url.origin +
-    '/share?name=' +
-    encodeURIComponent(title);
+    '/p/' +
+    encodeURIComponent(
+      String(product.row || productRow)
+    );
 
   const safeTitle = escapeHtml(title);
   const safeDescription = escapeHtml(description);
@@ -388,13 +411,15 @@ export default {
     try {
       const url = new URL(request.url);
 
-      if (
-        url.pathname === '/share' &&
+           if (
+        (
+          url.pathname === '/share' ||
+          /^\/p\/\d+$/.test(url.pathname)
+        ) &&
         request.method === 'GET'
       ) {
         return await handleProductShare(request);
       }
-
       if (
         url.pathname === '/auth/callback' &&
         request.method === 'GET'
