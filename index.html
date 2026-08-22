@@ -5772,22 +5772,8 @@ function getProductShareUrl(productName){
   const targetName =
     String(productName || '').trim();
 
-  // 第一優先：商品資料庫的「分享短網址」
-  if(Array.isArray(products)){
-    const matched =
-      products.find(function(p){
-        return String(p.name || '').trim() === targetName;
-      });
-
-    if(matched && String(matched.shareUrl || '').trim()){
-      return String(matched.shareUrl).trim();
-    }
-  }
-
-  // 還沒有分享短網址時，維持昨天已經很好用的長網址。
-  // 不會因為短網址建立失敗而讓分享功能壞掉。
-  return getQueenaBaseUrl() +
-    '?product=' +
+  return window.location.origin +
+    '/share?name=' +
     encodeURIComponent(targetName);
 }
 
