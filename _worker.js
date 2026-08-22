@@ -11,171 +11,285 @@ function jsonResponse(data, status = 200) {
   });
 }
 
-function redirectToShop(request, params) {
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
+function cleanDescription(value) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
+}
+
+async function getProductsFromGas() {
+  const target = new URL(GAS_URL);
+  target.searchParams.set('api', 'products');
+
+  const res = await fetch(target.toString(), {
+    method: 'GET',
+    redirect: 'follow'
+  });
+
+  if (!res.ok) {
+    throw new Error('讀取商品資料失敗');
+  }
+
+  const data = await res.json();
+
+  if (!data || !Array.isArray(data.products)) {
+    throw new Error('商品資料格式不正確');
+  }
+
+  return data.products;
+}
+
+async function handleProductShare(request) {
   const url = new URL(request.url);
 
-  const target =
-    new URL('/', url.origin);
+  const productName =
+    String(url.searchParams.get('name') || '').trim();
 
-  const hash =
-    new URLSearchParams(
-      params || {}
+  if (!productName) {
+    return Response.redirect(url.origin + '/', 302);
+  }
+
+  const products = await getProductsFromGas();
+
+  const product = products.find(function (item) {
+    return String(item.name || '').trim() === productName;
+  });
+
+  if (!product) {
+    return Response.redirect(
+      url.origin +
+        '/?product=' +
+        encodeURIComponent(productName),
+      302
     );
+  }
 
-  target.hash =
-    hash.toString();
+  const title =
+    String(product.name || productName).trim();
 
-  return Response.redirect(
-    target.toString(),
-    302
-  );
+  const description =
+    cleanDescription(product.intro) ||
+    'Queena 精選好物，點擊查看商品詳情。';
+
+  const image =
+    String(product.photo || '').trim();
+
+  const shopUrl =
+    url.origin +
+    '/?product=' +
+    encodeURIComponent(title);
+
+  const shareUrl =
+    url.origin +
+    '/share?name=' +
+    encodeURIComponent(title);
+
+  const safeTitle = escapeHtml(title);
+  const safeDescription = escapeHtml(description);
+  const safeImage = escapeHtml(image);
+  const safeShopUrl = escapeHtml(shopUrl);
+  const safeShareUrl = escapeHtml(shareUrl);
+
+  const imageMeta = image
+    ? `
+  <meta property="og:image" content="${safeImage}">
+  <meta property="og:image:secure_url" content="${safeImage}">
+  <meta property="og:image:alt" content="${safeTitle}">
+  <meta name="twitter:image" content="${safeImage}">`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>${safeTitle}｜Queena 精選好物</title>
+  <meta name="description" content="${safeDescription}">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Queena 精選好物">
+  <meta property="og:title" content="${safeTitle}">
+  <meta property="og:description" content="${safeDescription}">
+  <meta property="og:url" content="${safeShareUrl}">
+  ${imageMeta}
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${safeTitle}">
+  <meta name="twitter:description" content="${safeDescription}">
+
+  <script>
+    window.setTimeout(function () {
+      window.location.replace(${JSON.stringify(shopUrl)});
+    }, 500);
+  </script>
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      box-sizing: border-box;
+      font-family: Arial, "Noto Sans TC", sans-serif;
+      background: #fff8f3;
+      color: #4f3932;
+      text-align: center;
+    }
+
+    .card {
+      width: min(420px, 100%);
+      background: white;
+      padding: 24px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(110, 75, 62, 0.12);
+    }
+
+    img {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      border-radius: 14px;
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: 22px;
+    }
+
+    p {
+      line-height: 1.7;
+      color: #755f56;
+    }
+
+    a {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      background: #9a6d60;
+      color: white;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    ${
+      image
+        ? `<img src="${safeImage}" alt="${safeTitle}">`
+        : ''
+    }
+
+    <h1>${safeTitle}</h1>
+    <p>${safeDescription}</p>
+    <a href="${safeShopUrl}">查看商品</a>
+  </div>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html; charset=UTF-8',
+      'cache-control': 'public, max-age=300'
+    }
+  });
+}
+
+function redirectToShop(request, params) {
+  const url = new URL(request.url);
+  const target = new URL('/', url.origin);
+  const hash = new URLSearchParams(params || {});
+
+  target.hash = hash.toString();
+
+  return Response.redirect(target.toString(), 302);
 }
 
 async function proxyGet(request) {
+  const url = new URL(request.url);
+  const action = url.searchParams.get('action') || '';
+  const target = new URL(GAS_URL);
 
-  const url =
-    new URL(request.url);
+  target.searchParams.set('api', action);
 
-  const action =
-    url.searchParams.get('action') || '';
-
-  const target =
-    new URL(GAS_URL);
-
-  target.searchParams.set(
-    'api',
-    action
-  );
-
-  for (
-    const [key, value]
-    of url.searchParams.entries()
-  ) {
-
+  for (const [key, value] of url.searchParams.entries()) {
     if (key !== 'action') {
-      target.searchParams.set(
-        key,
-        value
-      );
+      target.searchParams.set(key, value);
     }
   }
 
-  const res =
-    await fetch(
-      target.toString(),
-      {
-        method: 'GET',
-        redirect: 'follow'
-      }
-    );
+  const res = await fetch(target.toString(), {
+    method: 'GET',
+    redirect: 'follow'
+  });
 
-  const text =
-    await res.text();
+  const text = await res.text();
 
-  return new Response(
-    text,
-    {
-      status:
-        res.ok
-          ? 200
-          : res.status,
-
-      headers: {
-        'content-type':
-          'application/json; charset=UTF-8',
-
-        'cache-control':
-          'no-store'
-      }
+  return new Response(text, {
+    status: res.ok ? 200 : res.status,
+    headers: {
+      'content-type': 'application/json; charset=UTF-8',
+      'cache-control': 'no-store'
     }
-  );
+  });
 }
 
 async function handleLineCallback(request) {
-
-  const url =
-    new URL(request.url);
-
-  const lineError =
-    url.searchParams.get('error') || '';
+  const url = new URL(request.url);
+  const lineError = url.searchParams.get('error') || '';
 
   if (lineError) {
-
     const description =
-      url.searchParams.get(
-        'error_description'
-      ) || lineError;
+      url.searchParams.get('error_description') ||
+      lineError;
 
-    return redirectToShop(
-      request,
-      {
-        line_error: description
-      }
-    );
+    return redirectToShop(request, {
+      line_error: description
+    });
   }
 
-  const code =
-    url.searchParams.get('code') || '';
-
-  const state =
-    url.searchParams.get('state') || '';
+  const code = url.searchParams.get('code') || '';
+  const state = url.searchParams.get('state') || '';
 
   if (!code || !state) {
-
-    return redirectToShop(
-      request,
-      {
-        line_error:
-          'LINE 登入回傳資料不完整'
-      }
-    );
+    return redirectToShop(request, {
+      line_error: 'LINE 登入回傳資料不完整'
+    });
   }
 
-  const target =
-    new URL(GAS_URL);
+  const target = new URL(GAS_URL);
 
-  target.searchParams.set(
-    'api',
-    'lineCallback'
-  );
-
-  target.searchParams.set(
-    'code',
-    code
-  );
-
-  target.searchParams.set(
-    'state',
-    state
-  );
+  target.searchParams.set('api', 'lineCallback');
+  target.searchParams.set('code', code);
+  target.searchParams.set('state', state);
 
   try {
+    const res = await fetch(target.toString(), {
+      method: 'GET',
+      redirect: 'follow'
+    });
 
-    const res =
-      await fetch(
-        target.toString(),
-        {
-          method: 'GET',
-          redirect: 'follow'
-        }
-      );
-
-    const text =
-      await res.text();
-
+    const text = await res.text();
     let data = null;
 
     try {
-
-      data =
-        JSON.parse(text);
-
+      data = JSON.parse(text);
     } catch (err) {
-
-      throw new Error(
-        'Google 後台沒有回傳正確資料'
-      );
+      throw new Error('Google 後台沒有回傳正確資料');
     }
 
     if (
@@ -183,7 +297,6 @@ async function handleLineCallback(request) {
       data.success !== true ||
       !data.rememberToken
     ) {
-
       throw new Error(
         data && data.message
           ? data.message
@@ -191,32 +304,22 @@ async function handleLineCallback(request) {
       );
     }
 
-    return redirectToShop(
-      request,
-      {
-        line_token:
-          data.rememberToken
-      }
-    );
+    return redirectToShop(request, {
+      line_token: data.rememberToken
+    });
 
   } catch (err) {
-
-    return redirectToShop(
-      request,
-      {
-        line_error:
-          err && err.message
-            ? err.message
-            : String(err)
-      }
-    );
+    return redirectToShop(request, {
+      line_error:
+        err && err.message
+          ? err.message
+          : String(err)
+    });
   }
 }
 
 async function proxyPost(request) {
-
-  const incoming =
-    await request.json();
+  const incoming = await request.json();
 
   const action =
     incoming && incoming.action
@@ -228,21 +331,13 @@ async function proxyPost(request) {
       ? incoming.payload
       : {};
 
-  const body =
-    new URLSearchParams();
-
-  body.set(
-    'type',
-    action
-  );
+  const body = new URLSearchParams();
+  body.set('type', action);
 
   if (action === 'wishlist') {
-
     body.set(
       'rememberToken',
-      String(
-        payload.rememberToken || ''
-      )
+      String(payload.rememberToken || '')
     );
 
     body.set(
@@ -255,12 +350,8 @@ async function proxyPost(request) {
     );
 
   } else {
-
-    Object.entries(
-      payload || {}
-    ).forEach(
+    Object.entries(payload || {}).forEach(
       ([key, value]) => {
-
         body.set(
           key,
           typeof value === 'string'
@@ -271,107 +362,70 @@ async function proxyPost(request) {
     );
   }
 
-  const res =
-    await fetch(
-      GAS_URL,
-      {
-        method: 'POST',
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: {
+      'content-type':
+        'application/x-www-form-urlencoded;charset=UTF-8'
+    },
+    body: body.toString(),
+    redirect: 'follow'
+  });
 
-        headers: {
-          'content-type':
-            'application/x-www-form-urlencoded;charset=UTF-8'
-        },
+  const text = await res.text();
 
-        body:
-          body.toString(),
-
-        redirect:
-          'follow'
-      }
-    );
-
-  const text =
-    await res.text();
-
-  return new Response(
-    text,
-    {
-      status:
-        res.ok
-          ? 200
-          : res.status,
-
-      headers: {
-        'content-type':
-          'application/json; charset=UTF-8',
-
-        'cache-control':
-          'no-store'
-      }
+  return new Response(text, {
+    status: res.ok ? 200 : res.status,
+    headers: {
+      'content-type': 'application/json; charset=UTF-8',
+      'cache-control': 'no-store'
     }
-  );
+  });
 }
 
 export default {
-
   async fetch(request, env) {
-
     try {
+      const url = new URL(request.url);
 
-      const url =
-        new URL(request.url);
-
-      // LINE 登入完成會直接回到 Cloudflare
       if (
-        url.pathname ===
-          '/auth/callback' &&
+        url.pathname === '/share' &&
         request.method === 'GET'
       ) {
-
-        return await
-          handleLineCallback(request);
+        return await handleProductShare(request);
       }
 
       if (
-        url.pathname === '/api'
+        url.pathname === '/auth/callback' &&
+        request.method === 'GET'
       ) {
+        return await handleLineCallback(request);
+      }
 
-        if (
-          request.method === 'GET'
-        ) {
-
-          return await
-            proxyGet(request);
+      if (url.pathname === '/api') {
+        if (request.method === 'GET') {
+          return await proxyGet(request);
         }
 
-        if (
-          request.method === 'POST'
-        ) {
-
-          return await
-            proxyPost(request);
+        if (request.method === 'POST') {
+          return await proxyPost(request);
         }
 
         return jsonResponse(
           {
             success: false,
-            message:
-              'Method not allowed'
+            message: 'Method not allowed'
           },
           405
         );
       }
 
-      return env.ASSETS.fetch(
-        request
-      );
+      return env.ASSETS.fetch(request);
 
     } catch (err) {
-
       return jsonResponse(
         {
           success: false,
-
           message:
             err && err.message
               ? err.message
