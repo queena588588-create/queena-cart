@@ -2763,6 +2763,7 @@ html.queena-mobile .mobileSite{
 }
 html.queena-mobile .shopTop,
 html.queena-mobile body > .wrap,
+html.queena-mobile body > .desktopSocial,
 html.queena-mobile body > .cartBar{
   display:none !important;
 }
@@ -3634,13 +3635,13 @@ html.queena-mobile body{
       還沒有選商品 ♡
     </div>
 
+        <div class="cartPriceNote">
+      ♡ 價格可能會有所不同，Queena 會盡快回覆優惠價給你唷 ♡
+    </div>
+
     <button id="sendBtn" class="actionBtn lineBtn">
       LINE 確認身分並送出
     </button>
-
-    <div class="cartPriceNote">
-      ♡ 每檔期優惠不同｜Queena 會查詢最優惠的價格私訊您唷 ♡
-    </div>
 
     <button id="clearBtn" class="actionBtn clearBtn">
       🗑️ 清空清單
@@ -5771,6 +5772,22 @@ function getProductShareUrl(productName){
 
   const targetName =
     String(productName || '').trim();
+
+  const matchedProduct =
+    Array.isArray(products)
+      ? products.find(function(product){
+          return String(product.name || '').trim() ===
+            targetName;
+        })
+      : null;
+
+  if(matchedProduct && matchedProduct.row){
+    return window.location.origin +
+      '/p/' +
+      encodeURIComponent(
+        String(matchedProduct.row)
+      );
+  }
 
   return window.location.origin +
     '/share?name=' +
