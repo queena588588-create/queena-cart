@@ -2527,8 +2527,8 @@ body{
 
   .mProductBody{
     position:relative;
-    padding:9px 37px 11px 9px;
-    min-height:77px;
+    padding:10px 9px 46px;
+    min-height:118px;
   }
 
   .mProductName{
@@ -2543,13 +2543,15 @@ body{
   }
 
   .mProductIntro{
-    color:#9a837c;
-    font-size:9px;
-    line-height:1.4;
-    margin-top:4px;
-    white-space:nowrap;
+    color:#705b54;
+    font-size:10.5px;
+    line-height:1.5;
+    margin-top:6px;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
     overflow:hidden;
-    text-overflow:ellipsis;
+    min-height:31px;
   }
 
   .mProductPrice{
@@ -3052,7 +3054,7 @@ html.queena-mobile body{
   }
 
   .mProductBody{
-    padding-right:73px !important;
+    padding-right:9px !important;
   }
 
   .shareToast{
@@ -3304,6 +3306,180 @@ html.queena-mobile body{
 @media(max-width:760px){
   .lineFriendPrompt{margin-top:12px;padding:13px 12px;}
   .lineFriendAddBtn{width:100%;}
+}
+
+/* ===== 商品完整介紹視窗 ===== */
+.productDetailTrigger{
+  cursor:pointer;
+}
+
+.productDetailOverlay{
+  position:fixed;
+  inset:0;
+  z-index:30000;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  padding:18px;
+  background:rgba(33,23,20,.55);
+  backdrop-filter:blur(3px);
+}
+
+.productDetailOverlay.show{
+  display:flex;
+}
+
+.productDetailPanel{
+  position:relative;
+  width:min(560px,100%);
+  max-height:90vh;
+  overflow:auto;
+  border-radius:26px 26px 20px 20px;
+  background:#fffaf7;
+  box-shadow:0 18px 55px rgba(47,30,25,.25);
+}
+
+.productDetailClose{
+  position:sticky;
+  float:right;
+  top:12px;
+  z-index:3;
+  width:42px;
+  height:42px;
+  margin:12px 12px -54px 0;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.94);
+  color:#6d554d;
+  font-size:25px;
+  line-height:1;
+  box-shadow:0 3px 12px rgba(60,40,34,.13);
+  cursor:pointer;
+}
+
+.productDetailPhotoWrap{
+  width:100%;
+  min-height:210px;
+  max-height:42vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background:#f4eeea;
+}
+
+.productDetailPhoto{
+  width:100%;
+  height:100%;
+  max-height:42vh;
+  display:block;
+  object-fit:contain;
+}
+
+.productDetailNoPhoto{
+  padding:75px 20px;
+  font-size:48px;
+}
+
+.productDetailContent{
+  padding:20px 20px 24px;
+}
+
+.productDetailCategory{
+  display:inline-flex;
+  margin-bottom:9px;
+  padding:5px 10px;
+  border-radius:999px;
+  background:#f6e7e2;
+  color:#a05d59;
+  font-size:11px;
+  font-weight:700;
+}
+
+.productDetailTitle{
+  margin:0;
+  color:#34231e;
+  font-size:21px;
+  line-height:1.4;
+  font-weight:850;
+}
+
+.productDetailPrice{
+  margin-top:9px;
+  color:#e95773;
+  font-size:18px;
+  font-weight:850;
+}
+
+.productDetailSection{
+  margin-top:17px;
+  padding:15px;
+  border:1px solid #eddfda;
+  border-radius:16px;
+  background:#fff;
+}
+
+.productDetailSectionTitle{
+  margin-bottom:7px;
+  color:#5a4139;
+  font-size:13px;
+  font-weight:850;
+}
+
+.productDetailText{
+  color:#66514a;
+  font-size:14px;
+  line-height:1.75;
+  white-space:pre-line;
+  overflow-wrap:anywhere;
+}
+
+.productDetailActions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:18px;
+}
+
+.productDetailBtn{
+  min-height:48px;
+  border-radius:14px;
+  font-size:14px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.productDetailBuy{
+  border:0;
+  background:linear-gradient(135deg,#ef7785,#e95f75);
+  color:#fff;
+}
+
+.productDetailAsk{
+  border:1px solid #e6cfc8;
+  background:#fff;
+  color:#76574f;
+}
+
+.productDetailShare{
+  grid-column:1/-1;
+  border:1px solid #eadbd5;
+  background:#fff7f4;
+  color:#c35869;
+}
+
+body.product-detail-open{
+  overflow:hidden !important;
+}
+
+@media(min-width:761px){
+  .productDetailOverlay{
+    align-items:center;
+  }
+
+  .productDetailPanel{
+    border-radius:24px;
+  }
 }
 </style>
 
@@ -3647,6 +3823,13 @@ html.queena-mobile body{
       🗑️ 清空清單
     </button>
 
+  </div>
+</div>
+
+<div id="productDetailOverlay" class="productDetailOverlay" aria-hidden="true">
+  <div class="productDetailPanel" role="dialog" aria-modal="true" aria-labelledby="productDetailTitle">
+    <button type="button" id="productDetailClose" class="productDetailClose" aria-label="關閉商品介紹">×</button>
+    <div id="productDetailBody"></div>
   </div>
 </div>
 
@@ -4033,7 +4216,7 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
 
     const photoHtml =
       p.photo
-        ? '<img src="' +
+        ? '<img class="productDetailTrigger" title="查看完整介紹" src="' +
           escapeHtml(p.photo) +
           '" alt="' +
           escapeHtml(p.name || '') +
@@ -4045,13 +4228,13 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
 
       '<div class="featuredCardBody">' +
 
-        '<div class="featuredCardName">' +
+        '<div class="featuredCardName productDetailTrigger" title="查看完整介紹">' +
           escapeHtml(p.name || '') +
         '</div>' +
 
         (
           p.intro
-            ? '<div class="featuredCardIntro">' +
+            ? '<div class="featuredCardIntro productDetailTrigger" title="查看完整介紹">' +
                 escapeHtml(p.intro) +
               '</div>'
             : ''
@@ -4080,6 +4263,14 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
 
     const shareBtn =
       card.querySelector('.featuredShareBtn');
+
+    card.querySelectorAll('.productDetailTrigger')
+      .forEach(function(trigger){
+        trigger.addEventListener('click',function(e){
+          e.preventDefault();
+          openProductDetail(p.name || '');
+        });
+      });
 
     if(shareBtn){
       shareBtn.addEventListener('click',function(e){
@@ -4264,7 +4455,7 @@ function render(){
     if(p.photo){
 
       photoHtml =
-        '<img class="photo" src="' +
+        '<img class="photo productDetailTrigger" title="查看完整介紹" src="' +
         escapeHtml(p.photo) +
         '" alt="' +
         escapeHtml(p.name) +
@@ -4299,11 +4490,11 @@ function render(){
           escapeHtml(p.category || '') +
         '</span>' +
 
-        '<div class="name">' +
+        '<div class="name productDetailTrigger" title="查看完整介紹">' +
           escapeHtml(p.name || '') +
         '</div>' +
 
-        '<div class="intro">' +
+        '<div class="intro productDetailTrigger" title="查看完整介紹">' +
           escapeHtml(p.intro || '') +
         '</div>' +
 
@@ -4333,6 +4524,14 @@ function render(){
 
     const shareBtn =
       card.querySelector('.shareBtn');
+
+    card.querySelectorAll('.productDetailTrigger')
+      .forEach(function(trigger){
+        trigger.addEventListener('click',function(e){
+          e.preventDefault();
+          openProductDetail(p.name || '');
+        });
+      });
 
     if(shareBtn){
       shareBtn.addEventListener('click', function(e){
@@ -5225,6 +5424,193 @@ function mobileEscape(text){
     .replace(/'/g,'&#039;');
 }
 
+let activeDetailProductName = '';
+
+function findQueenaProductByName(productName){
+  const target = String(productName || '').trim();
+
+  return Array.isArray(products)
+    ? products.find(function(product){
+        return String(product.name || '').trim() === target;
+      }) || null
+    : null;
+}
+
+function closeProductDetail(){
+  const overlay = document.getElementById('productDetailOverlay');
+
+  if(overlay){
+    overlay.classList.remove('show');
+    overlay.setAttribute('aria-hidden','true');
+  }
+
+  document.body.classList.remove('product-detail-open');
+  activeDetailProductName = '';
+}
+
+function openProductDetail(productName){
+  const product = findQueenaProductByName(productName);
+  const overlay = document.getElementById('productDetailOverlay');
+  const body = document.getElementById('productDetailBody');
+
+  if(!product || !overlay || !body) return;
+
+  activeDetailProductName = String(product.name || '').trim();
+
+  const photoHtml = product.photo
+    ? '<div class="productDetailPhotoWrap">' +
+        '<img class="productDetailPhoto" src="' +
+          mobileEscape(product.photo) +
+        '" alt="' +
+          mobileEscape(product.name || '') +
+        '">' +
+      '</div>'
+    : '<div class="productDetailPhotoWrap">' +
+        '<div class="productDetailNoPhoto">🛍️</div>' +
+      '</div>';
+
+  const categoryHtml = product.category
+    ? '<div class="productDetailCategory">' +
+        mobileEscape(product.category) +
+      '</div>'
+    : '';
+
+  const priceHtml = product.price
+    ? '<div class="productDetailPrice">' +
+        mobileEscape(product.price) +
+      '</div>'
+    : '';
+
+  const introHtml = product.intro
+    ? '<div class="productDetailSection">' +
+        '<div class="productDetailSectionTitle">商品介紹</div>' +
+        '<div class="productDetailText">' +
+          mobileEscape(product.intro) +
+        '</div>' +
+      '</div>'
+    : '<div class="productDetailSection">' +
+        '<div class="productDetailSectionTitle">商品介紹</div>' +
+        '<div class="productDetailText">精選好物，想了解更多可以直接詢問 Queena ♡</div>' +
+      '</div>';
+
+  const specsHtml = product.specs
+    ? '<div class="productDetailSection">' +
+        '<div class="productDetailSectionTitle">規格／款式</div>' +
+        '<div class="productDetailText">' +
+          mobileEscape(product.specs) +
+        '</div>' +
+      '</div>'
+    : '';
+
+  const buyHtml = product.buy
+    ? '<div class="productDetailSection">' +
+        '<div class="productDetailSectionTitle">購買說明</div>' +
+        '<div class="productDetailText">' +
+          mobileEscape(product.buy) +
+        '</div>' +
+      '</div>'
+    : '';
+
+  body.innerHTML =
+    photoHtml +
+    '<div class="productDetailContent">' +
+      categoryHtml +
+      '<h2 id="productDetailTitle" class="productDetailTitle">' +
+        mobileEscape(product.name || '') +
+      '</h2>' +
+      priceHtml +
+      introHtml +
+      specsHtml +
+      buyHtml +
+      '<div class="productDetailActions">' +
+        '<button type="button" id="productDetailBuy" class="productDetailBtn productDetailBuy">🛒 我要買</button>' +
+        '<button type="button" id="productDetailAsk" class="productDetailBtn productDetailAsk">💬 想了解</button>' +
+        '<button type="button" id="productDetailShare" class="productDetailBtn productDetailShare">↗ 分享這項商品</button>' +
+      '</div>' +
+    '</div>';
+
+  overlay.classList.add('show');
+  overlay.setAttribute('aria-hidden','false');
+  document.body.classList.add('product-detail-open');
+
+  const buyBtn = document.getElementById('productDetailBuy');
+  const askBtn = document.getElementById('productDetailAsk');
+  const shareBtn = document.getElementById('productDetailShare');
+
+  if(buyBtn){
+    buyBtn.addEventListener('click',function(){
+      addProductFromDetail('buy');
+    });
+  }
+
+  if(askBtn){
+    askBtn.addEventListener('click',function(){
+      addProductFromDetail('ask');
+    });
+  }
+
+  if(shareBtn){
+    shareBtn.addEventListener('click',function(){
+      shareQueenaProduct(activeDetailProductName);
+    });
+  }
+}
+
+function addProductFromDetail(intent){
+  const product = findQueenaProductByName(activeDetailProductName);
+
+  if(!product) return;
+
+  const current = cart[product.name] || {};
+
+  cart[product.name] = {
+    name:product.name,
+    qty:Number(current.qty) > 0 ? Number(current.qty) : 1,
+    intent:intent === 'ask' ? 'ask' : 'buy',
+    spec:current.spec || ''
+  };
+
+  closeProductDetail();
+
+  if(typeof updateCart === 'function') updateCart();
+  if(typeof render === 'function') render();
+  if(typeof renderFeatured === 'function') renderFeatured();
+  if(typeof renderMobileApp === 'function' && isMobileQueena()){
+    renderMobileApp();
+  }
+
+  if(typeof showShareToast === 'function'){
+    showShareToast(
+      intent === 'ask'
+        ? '已加入清單：想了解 ♡'
+        : '已加入清單：我要買 ♡'
+    );
+  }
+}
+
+(function setupProductDetailModal(){
+  const overlay = document.getElementById('productDetailOverlay');
+  const closeBtn = document.getElementById('productDetailClose');
+
+  if(closeBtn){
+    closeBtn.addEventListener('click',closeProductDetail);
+  }
+
+  if(overlay){
+    overlay.addEventListener('click',function(event){
+      if(event.target === overlay){
+        closeProductDetail();
+      }
+    });
+  }
+
+  document.addEventListener('keydown',function(event){
+    if(event.key === 'Escape'){
+      closeProductDetail();
+    }
+  });
+})();
+
 function setupMobileHero(){
   const source = document.querySelector('.heroStoreImage');
   const target = document.getElementById('mHeroImage');
@@ -5284,13 +5670,13 @@ function mobileProductCard(p, badgeText){
     mobileEscape(p.name || '') +
     '">' +
 
-      '<div class="mProductPhotoWrap">' +
+      '<div class="mProductPhotoWrap productDetailTrigger" title="查看完整介紹">' +
         badge +
         photo +
       '</div>' +
 
       '<div class="mProductBody">' +
-        '<div class="mProductName">' +
+        '<div class="mProductName productDetailTrigger" title="查看完整介紹">' +
           mobileEscape(p.name || '') +
         '</div>' +
         intro +
@@ -5318,6 +5704,21 @@ function bindMobileProductButtons(container){
 
       const btn = card.querySelector('.mAddBtn');
       const shareBtn = card.querySelector('.mShareBtn');
+      const detailTriggers =
+        card.querySelectorAll('.productDetailTrigger');
+
+      detailTriggers.forEach(function(trigger){
+        trigger.addEventListener('click',function(e){
+          e.preventDefault();
+
+          const name =
+            card.getAttribute('data-mobile-product');
+
+          if(name){
+            openProductDetail(name);
+          }
+        });
+      });
 
       if(shareBtn){
         shareBtn.addEventListener('click',function(e){
@@ -6112,4 +6513,3 @@ function openSharedQueenaProduct(){
   color:#7f6a63;
   font-size:14px;
 ">
-
