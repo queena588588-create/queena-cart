@@ -709,6 +709,68 @@
   }
 </style>
 
+<style>
+  .couponWelcomeOverlay{
+    position:fixed;
+    inset:0;
+    z-index:10050;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:22px;
+    background:rgba(63,43,38,.48);
+    backdrop-filter:blur(3px);
+  }
+  .couponWelcomeOverlay.show{display:flex}
+  .couponWelcomeCard{
+    width:min(420px,100%);
+    padding:30px 24px 24px;
+    border:1px solid #eadbd3;
+    border-radius:26px;
+    background:linear-gradient(180deg,#fffdfb 0%,#fff7f2 100%);
+    box-shadow:0 22px 60px rgba(67,42,35,.22);
+    text-align:center;
+    color:#4c332d;
+  }
+  .couponWelcomeCard h2{margin:0 0 16px;font-size:25px}
+  .couponWelcomeText{margin:0 0 14px;font-size:17px;line-height:1.7}
+  .couponWelcomeOffer{
+    margin:12px auto 14px;
+    padding:14px 18px;
+    border:1px dashed #d99993;
+    border-radius:16px;
+    background:#fff;
+    color:#c45462;
+    font-size:26px;
+    font-weight:900;
+  }
+  .couponWelcomeNote{margin:0 0 20px;color:#806d67;font-size:14px}
+  .couponWelcomeActions{display:flex;gap:10px}
+  .couponWelcomeActions button{
+    flex:1;
+    min-height:48px;
+    border-radius:999px;
+    font-size:16px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  .couponClaimBtn{border:0;background:#9a7067;color:#fff}
+  .couponBrowseBtn{border:1px solid #dccbc4;background:#fff;color:#6b514b}
+  .cartCouponNotice{
+    display:none;
+    margin:14px 0;
+    padding:13px 15px;
+    border:1px dashed #d99a91;
+    border-radius:14px;
+    background:#fff8f3;
+    color:#7a5149;
+    text-align:center;
+    font-weight:800;
+    line-height:1.5;
+  }
+  .cartCouponNotice.show{display:block}
+</style>
+
 
 <style>
   .featuredSections{
@@ -3785,6 +3847,19 @@ body.product-detail-open{
     </a>
   </div>
 </div>
+<div id="couponWelcomeOverlay" class="couponWelcomeOverlay" aria-hidden="true">
+  <div class="couponWelcomeCard" role="dialog" aria-modal="true" aria-labelledby="couponWelcomeTitle">
+    <h2 id="couponWelcomeTitle">歡迎來逛逛 ♡</h2>
+    <p class="couponWelcomeText">領取 Queena 網站限定購物券</p>
+    <div class="couponWelcomeOffer">滿 $500 折 $30</div>
+    <p class="couponWelcomeNote">本券不與部分優惠活動併用</p>
+    <div class="couponWelcomeActions">
+      <button type="button" id="couponClaimBtn" class="couponClaimBtn">立即領券</button>
+      <button type="button" id="couponBrowseBtn" class="couponBrowseBtn">先逛逛</button>
+    </div>
+  </div>
+</div>
+
 <div class="cartBar">
   <div class="cartInfo">
     🛍 已選 <strong id="cartCount">0</strong> 件
@@ -3809,6 +3884,10 @@ body.product-detail-open{
 
     <div id="messageBox" class="messageBox">
       還沒有選商品 ♡
+    </div>
+
+    <div id="cartCouponNotice" class="cartCouponNotice">
+      🎟️ 已領取網站限定購物券<br>滿 $500 折 $30
     </div>
 
         <div class="cartPriceNote">
@@ -3839,6 +3918,68 @@ body.product-detail-open{
 let products = [];
 let activeCategory = '全部';
 let cart = {};
+
+const QUEENA_COUPON_KEY = 'queenaCoupon50030';
+const QUEENA_COUPON_DISMISSED_KEY = 'queenaCoupon50030Dismissed';
+const QUEENA_COUPON_ITEM_NAME =
+  '🎟️ 網站限定購物券｜滿 $500 折 $30（符合資格時使用）';
+
+function hasQueenaCoupon(){
+  return localStorage.getItem(QUEENA_COUPON_KEY) === '1';
+}
+
+function updateQueenaCouponDisplay(){
+  const notice = document.getElementById('cartCouponNotice');
+  if(notice){
+    notice.classList.toggle('show', hasQueenaCoupon());
+  }
+}
+
+function closeQueenaCouponWelcome(){
+  const overlay = document.getElementById('couponWelcomeOverlay');
+  if(overlay){
+    overlay.classList.remove('show');
+    overlay.setAttribute('aria-hidden','true');
+  }
+}
+
+function setupQueenaCoupon(){
+  const overlay = document.getElementById('couponWelcomeOverlay');
+  const claimBtn = document.getElementById('couponClaimBtn');
+  const browseBtn = document.getElementById('couponBrowseBtn');
+
+  updateQueenaCouponDisplay();
+
+  if(claimBtn){
+    claimBtn.addEventListener('click',function(){
+      localStorage.setItem(QUEENA_COUPON_KEY,'1');
+      sessionStorage.removeItem(QUEENA_COUPON_DISMISSED_KEY);
+      updateQueenaCouponDisplay();
+      closeQueenaCouponWelcome();
+      alert('🎟️ 領券成功！滿 $500 可折 $30 ♡');
+    });
+  }
+
+  if(browseBtn){
+    browseBtn.addEventListener('click',function(){
+      sessionStorage.setItem(QUEENA_COUPON_DISMISSED_KEY,'1');
+      closeQueenaCouponWelcome();
+    });
+  }
+
+  if(
+    overlay &&
+    !hasQueenaCoupon() &&
+    sessionStorage.getItem(QUEENA_COUPON_DISMISSED_KEY) !== '1'
+  ){
+    setTimeout(function(){
+      overlay.classList.add('show');
+      overlay.setAttribute('aria-hidden','false');
+    },450);
+  }
+}
+
+setupQueenaCoupon();
 
 let lineProfile = null;
 const lineRememberTokenFromServer = '';
@@ -4588,6 +4729,7 @@ function updateCart(){
   }
 
   renderCartPanel();
+  updateQueenaCouponDisplay();
 
 }
 
@@ -5124,9 +5266,25 @@ function submitWishlist(items){
   sendBtn.disabled = true;
   sendBtn.textContent = '送出中...';
 
+  const itemsToSend = items.slice();
+
+  if(
+    hasQueenaCoupon() &&
+    !itemsToSend.some(function(item){
+      return item && item.name === QUEENA_COUPON_ITEM_NAME;
+    })
+  ){
+    itemsToSend.push({
+      name: QUEENA_COUPON_ITEM_NAME,
+      qty: 1,
+      intent: 'buy',
+      spec: ''
+    });
+  }
+
   apiPost('wishlist', {
     rememberToken: rememberToken,
-    items: items
+    items: itemsToSend
   })
     .then(function(){
 
@@ -5148,6 +5306,14 @@ function submitWishlist(items){
 
       localStorage.removeItem(
         'queenaPendingSend'
+      );
+
+      localStorage.removeItem(
+        QUEENA_COUPON_KEY
+      );
+
+      sessionStorage.removeItem(
+        QUEENA_COUPON_DISMISSED_KEY
       );
 
       updateCart();
