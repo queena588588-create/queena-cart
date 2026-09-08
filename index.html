@@ -3555,9 +3555,49 @@ body.product-detail-open{
 #queenaHomeEntry .qeHotspot:focus-visible{outline:3px solid rgba(201,143,128,.55);outline-offset:-3px;}
 </style>
 <!-- QUEENA_HOME_END_CSS -->
+
+<style id="queenaBackHomeStyle">
+#queenaBackHomeBtn{
+  position:fixed;
+  left:14px;
+  bottom:82px;
+  z-index:99998;
+  display:none;
+  align-items:center;
+  gap:7px;
+  min-height:42px;
+  padding:9px 13px;
+  border:1px solid rgba(205,157,145,.55);
+  border-radius:999px;
+  background:rgba(255,250,248,.96);
+  color:#6b4b43;
+  font-family:Arial,"Noto Sans TC",sans-serif;
+  font-size:13px;
+  font-weight:800;
+  box-shadow:0 8px 24px rgba(82,54,47,.15);
+  backdrop-filter:blur(10px);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+#queenaBackHomeBtn.show{display:flex}
+#queenaBackHomeBtn:active{transform:scale(.98)}
+@media(min-width:761px){
+  #queenaBackHomeBtn{
+    left:22px;
+    bottom:22px;
+  }
+}
+</style>
+
 </head>
 
 <body>
+
+<button type="button" id="queenaBackHomeBtn" aria-label="回入口首頁">
+  <span aria-hidden="true">⌂</span>
+  <span>回入口首頁</span>
+</button>
+
 <!-- QUEENA_HOME_BEGIN_HTML -->
 <div id="queenaHomeEntry" aria-label="Queena 商城首頁">
   <div class="qePage">
@@ -6828,6 +6868,76 @@ function openSharedQueenaProduct(){
 })();
 </script>
 <!-- QUEENA_HOME_END_JS -->
+
+<script id="queenaBackHomeScript">
+(function(){
+  function getEntry(){
+    return document.getElementById('queenaHomeEntry');
+  }
+
+  function getBackBtn(){
+    return document.getElementById('queenaBackHomeBtn');
+  }
+
+  window.queenaShowEntryHome = function(){
+    var entry = getEntry();
+    var btn = getBackBtn();
+
+    if(entry){
+      entry.style.display = 'block';
+      entry.scrollTop = 0;
+    }
+
+    if(btn){
+      btn.classList.remove('show');
+    }
+
+    document.body.style.overflow = '';
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
+  function syncBackHomeButton(){
+    var entry = getEntry();
+    var btn = getBackBtn();
+    if(!btn) return;
+
+    var entryVisible =
+      entry &&
+      getComputedStyle(entry).display !== 'none';
+
+    btn.classList.toggle('show', !entryVisible);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var btn = getBackBtn();
+
+    if(btn){
+      btn.addEventListener('click', function(){
+        window.queenaShowEntryHome();
+      });
+    }
+
+    syncBackHomeButton();
+
+    var entry = getEntry();
+    if(entry && window.MutationObserver){
+      new MutationObserver(syncBackHomeButton)
+        .observe(entry, {attributes:true, attributeFilter:['style','class']});
+    }
+  });
+
+  // 包住原本的 hide：進商城後才顯示「回入口首頁」
+  if(typeof window.queenaHomeHide_ === 'function'){
+    var originalHide = window.queenaHomeHide_;
+    window.queenaHomeHide_ = function(){
+      originalHide.apply(this, arguments);
+      setTimeout(syncBackHomeButton, 0);
+    };
+  }
+})();
+</script>
+
 </body>
 </html>
 <div style="
