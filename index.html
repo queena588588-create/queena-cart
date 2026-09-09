@@ -7537,7 +7537,7 @@ function openSharedQueenaProduct(){
   }
 
   function syncHomepage(items){
-    if(!Array.isArray(items) || items.length === 0) return;
+    if(!Array.isArray(items)) return;
 
     var buttons = getContentButtons();
     if(buttons.length === 0) return;
@@ -7550,6 +7550,12 @@ function openSharedQueenaProduct(){
         return (Number(a.sort)||9999) - (Number(b.sort)||9999);
       })
       .slice(0, buttons.length);
+
+    // 先把全部固定卡片隱藏，避免關閉一個後，最後一張舊預設卡殘留造成重複
+    buttons.forEach(function(btn){
+      btn.style.display = 'none';
+      btn.setAttribute('aria-hidden','true');
+    });
 
     rows.forEach(function(item, i){
       var btn = buttons[i];
@@ -7564,6 +7570,8 @@ function openSharedQueenaProduct(){
       }
 
       btn.setAttribute('aria-label', String(item.title || ''));
+      btn.setAttribute('aria-hidden','false');
+      btn.style.display = 'block';
 
       var title = esc(item.title || '');
       var sub = esc(item.subtitle || '');
