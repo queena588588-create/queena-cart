@@ -4117,9 +4117,9 @@ body.product-detail-open{
 
 <body>
 
-<button type="button" id="queenaBackHomeBtn" aria-label="回入口首頁">
+<button type="button" id="queenaBackHomeBtn" aria-label="回首頁">
   <span aria-hidden="true">⌂</span>
-  <span>回入口首頁</span>
+  <span>回首頁</span>
 </button>
 
 <!-- QUEENA_HOME_BEGIN_HTML -->
@@ -7499,7 +7499,7 @@ function openSharedQueenaProduct(){
     }
   });
 
-  // 包住原本的 hide：進商城後才顯示「回入口首頁」
+  // 包住原本的 hide：進商城後才顯示「回首頁」
   if(typeof window.queenaHomeHide_ === 'function'){
     var originalHide = window.queenaHomeHide_;
     window.queenaHomeHide_ = function(){
@@ -7515,6 +7515,8 @@ function openSharedQueenaProduct(){
 <script id="queenaHomepageSheetSafeSync">
 (function(){
   'use strict';
+
+  var CACHE_KEY = 'queenaHomepageSheetCacheV1';
 
   function esc(text){
     return String(text || '')
@@ -7576,17 +7578,32 @@ function openSharedQueenaProduct(){
     });
   }
 
+  // 先套用上次成功讀到的試算表內容，避免入口先閃舊字
+  try{
+    var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if(Array.isArray(cached) && cached.length){
+      syncHomepage(cached);
+    }
+  }catch(e){}
+
   function loadHomepage(){
     if(typeof apiGet !== 'function') return false;
 
-    apiGet('homepage')
+    apiGet('homepage', { _ts: Date.now() })
       .then(function(data){
-        if(data && data.success !== false){
-          syncHomepage(data.homepage || []);
+        if(data && data.success !== false && Array.isArray(data.homepage)){
+          syncHomepage(data.homepage);
+
+          try{
+            localStorage.setItem(
+              CACHE_KEY,
+              JSON.stringify(data.homepage)
+            );
+          }catch(e){}
         }
       })
       .catch(function(){
-        // 讀不到設定時，維持原本漂亮入口，不影響商城。
+        // API 暫時讀不到時，只保留上次成功載入的試算表內容。
       });
 
     return true;
