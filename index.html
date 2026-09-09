@@ -5249,6 +5249,14 @@ function render(){
 
         priceHtml +
 
+        (
+          p.albumUrl && /^https?:\/\//i.test(String(p.albumUrl).trim())
+            ? '<a class="albumBtn" href="' +
+                escapeHtml(String(p.albumUrl).trim()) +
+                '" target="_blank" rel="noopener noreferrer">📂 看更多款式</a>'
+            : ''
+        ) +
+
         '<div class="productActionRow">' +
 
           '<button class="addBtn ' +
@@ -5273,6 +5281,15 @@ function render(){
 
     const shareBtn =
       card.querySelector('.shareBtn');
+
+    const albumBtn =
+      card.querySelector('.albumBtn');
+
+    if(albumBtn){
+      albumBtn.addEventListener('click',function(e){
+        e.stopPropagation();
+      });
+    }
 
     card.querySelectorAll('.productDetailTrigger')
       .forEach(function(trigger){
@@ -6455,6 +6472,14 @@ function mobileProductCard(p, badgeText){
         '</div>' +
         intro +
         price +
+
+        (
+          p.albumUrl && /^https?:\/\//i.test(String(p.albumUrl).trim())
+            ? '<a class="mAlbumBtn" href="' +
+                mobileEscape(String(p.albumUrl).trim()) +
+                '" target="_blank" rel="noopener noreferrer">📂 看更多款式</a>'
+            : ''
+        ) +
 
         '<button type="button" class="mShareBtn" aria-label="分享商品">↗</button>' +
 
