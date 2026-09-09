@@ -4110,37 +4110,9 @@ body.product-detail-open{
 </style>
 
 
-<style id="queenaDriveAlbumButtonStyle">
-.driveAlbumBtn,
-.mDriveAlbumBtn{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:5px;
-  margin-top:8px;
-  min-height:36px;
-  padding:7px 10px;
-  border:1px solid #dfcfc9;
-  border-radius:999px;
-  background:#fffaf8;
-  color:#73564f !important;
-  font-size:12px;
-  font-weight:700;
-  text-decoration:none !important;
-  box-sizing:border-box;
-}
-.driveAlbumBtn:hover{
-  background:#f5e7e2;
-}
-.mDriveAlbumBtn{
-  width:calc(100% - 64px);
-  margin-top:7px;
-  min-height:30px;
-  font-size:10px;
-  padding:5px 7px;
-}
+<style id="queenaAlbumLinkStyle">
+.albumBtn,.mAlbumBtn{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;min-height:36px;padding:7px 10px;border:1px solid #dfcfc9;border-radius:999px;background:#fffaf8;color:#73564f!important;font-size:12px;font-weight:700;text-decoration:none!important;box-sizing:border-box}.albumBtn:hover{background:#f5e7e2}.mAlbumBtn{width:calc(100% - 64px);margin-top:7px;min-height:30px;font-size:10px;padding:5px 7px}
 </style>
-
 </head>
 
 <body>
@@ -5008,10 +4980,10 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
             : ''
         ) +
 
-(
-          p.buy && /^https?:\/\//i.test(String(p.buy).trim())
-            ? '<a class="driveAlbumBtn" href="' +
-                escapeHtml(String(p.buy).trim()) +
+        (
+          p.albumUrl && /^https?:\/\//i.test(String(p.albumUrl).trim())
+            ? '<a class="albumBtn" href="' +
+                escapeHtml(String(p.albumUrl).trim()) +
                 '" target="_blank" rel="noopener noreferrer">📂 看更多款式</a>'
             : ''
         ) +
@@ -5082,7 +5054,7 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
     // 點圖片 / 商品名稱也等同按「加入清單」
     card.addEventListener('click',function(e){
       if(e.target.closest('.featuredShareBtn')) return;
-      if(e.target.closest('.driveAlbumBtn')) return;
+      if(e.target.closest('.albumBtn')) return;
       btn.click();
     });
 
@@ -5276,14 +5248,6 @@ function render(){
         '</div>' +
 
         priceHtml +
-
-        (
-          p.buy && /^https?:\/\//i.test(String(p.buy).trim())
-            ? '<a class="driveAlbumBtn" href="' +
-                escapeHtml(String(p.buy).trim()) +
-                '" target="_blank" rel="noopener noreferrer">📂 看更多款式</a>'
-            : ''
-        ) +
 
         '<div class="productActionRow">' +
 
@@ -6492,14 +6456,6 @@ function mobileProductCard(p, badgeText){
         intro +
         price +
 
-        (
-          p.buy && /^https?:\/\//i.test(String(p.buy).trim())
-            ? '<a class="mDriveAlbumBtn" href="' +
-                mobileEscape(String(p.buy).trim()) +
-                '" target="_blank" rel="noopener noreferrer">📂 看更多款式</a>'
-            : ''
-        ) +
-
         '<button type="button" class="mShareBtn" aria-label="分享商品">↗</button>' +
 
         '<button type="button" class="mAddBtn ' +
@@ -6522,12 +6478,10 @@ function bindMobileProductButtons(container){
 
       const btn = card.querySelector('.mAddBtn');
       const shareBtn = card.querySelector('.mShareBtn');
-      const driveBtn = card.querySelector('.mDriveAlbumBtn');
+      const albumBtn = card.querySelector('.mAlbumBtn');
 
-      if(driveBtn){
-        driveBtn.addEventListener('click',function(e){
-          e.stopPropagation();
-        });
+      if(albumBtn){
+        albumBtn.addEventListener('click',function(e){ e.stopPropagation(); });
       }
       const detailTriggers =
         card.querySelectorAll('.productDetailTrigger');
