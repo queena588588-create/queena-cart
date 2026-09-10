@@ -4113,6 +4113,73 @@ body.product-detail-open{
 <style id="queenaAlbumLinkStyle">
 .albumBtn,.mAlbumBtn{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;min-height:36px;padding:7px 10px;border:1px solid #dfcfc9;border-radius:999px;background:#fffaf8;color:#73564f!important;font-size:12px;font-weight:700;text-decoration:none!important;box-sizing:border-box}.albumBtn:hover{background:#f5e7e2}.mAlbumBtn{width:calc(100% - 64px);margin-top:7px;min-height:30px;font-size:10px;padding:5px 7px}
 </style>
+
+<style id="queenaAdaptiveFullScreenTravelFill">
+html, body{
+  min-height:100%;
+  margin:0;
+  background:#fff4f7;
+}
+
+#queenaHomeEntry{
+  min-height:100vh !important;
+  min-height:100svh !important;
+  min-height:100dvh !important;
+  background:linear-gradient(180deg,#fff6f8 0%,#fff2f6 72%,#fdebf1 100%) !important;
+}
+
+#queenaHomeEntry .qePage{
+  min-height:100vh !important;
+  min-height:100svh !important;
+  min-height:100dvh !important;
+  background:transparent !important;
+  position:relative;
+  overflow:hidden;
+  padding-bottom:calc(92px + env(safe-area-inset-bottom)) !important;
+  box-sizing:border-box;
+}
+
+#queenaHomeEntry .qePage::after{
+  content:"✈️   ✦   🧳   ♡   📷   ✦   🎀   🗺️   ✦";
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-height:110px;
+  padding:24px 18px calc(30px + env(safe-area-inset-bottom));
+  box-sizing:border-box;
+  font-size:clamp(17px,4.2vw,28px);
+  letter-spacing:clamp(7px,2vw,18px);
+  line-height:1.8;
+  text-align:center;
+  color:rgba(126,77,87,.30);
+  filter:saturate(.72);
+  opacity:.48;
+  background:
+    radial-gradient(circle at 13% 35%, rgba(255,255,255,.88) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 40%, rgba(255,255,255,.75) 0 2px, transparent 3px),
+    radial-gradient(circle at 48% 70%, rgba(255,255,255,.70) 0 1.5px, transparent 2.5px),
+    linear-gradient(180deg, rgba(255,246,249,0) 0%, rgba(252,230,238,.82) 100%);
+}
+
+@media (max-width:760px) and (min-height:780px){
+  #queenaHomeEntry .qePage::after{
+    min-height:clamp(120px,16dvh,190px);
+  }
+}
+
+@media (max-width:760px) and (min-height:900px){
+  #queenaHomeEntry .qePage::after{
+    min-height:clamp(145px,19dvh,220px);
+  }
+}
+
+html.shared-product-mode #queenaHomeEntry,
+html.shared-product-initial #queenaHomeEntry{
+  min-height:0 !important;
+}
+</style>
+
 </head>
 
 <body>
