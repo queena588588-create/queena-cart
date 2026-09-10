@@ -4117,6 +4117,25 @@ body.product-detail-open{
 
 <body>
 
+<script id="queenaSharedProductInitialGuard">
+(function(){
+  try{
+    var params = new URLSearchParams(window.location.search);
+    var product = String(params.get('product') || '').trim();
+    if(product){
+      document.documentElement.classList.add('shared-product-initial');
+    }
+  }catch(e){}
+})();
+</script>
+
+<style id="queenaSharedProductInitialGuardStyle">
+html.shared-product-initial #queenaHomeEntry{
+  display:none !important;
+}
+</style>
+
+
 <button type="button" id="queenaBackHomeBtn" aria-label="回首頁">
   <span aria-hidden="true">⌂</span>
   <span>回首頁</span>
@@ -7087,8 +7106,8 @@ async function shareQueenaProduct(productName){
 
 
 function goQueenaHome(){
-  // 回正式商城首頁，不保留 ?product= 商品參數
-  window.top.location.href = getQueenaBaseUrl();
+  // 分享商品頁按「回首頁」：回 Cloudflare 正式入口首頁，不保留 ?product=
+  window.top.location.href = window.location.origin + '/';
 }
 
 function openSharedQueenaProduct(){
@@ -7117,6 +7136,12 @@ function openSharedQueenaProduct(){
 
     // 標記：這是「單一商品分享頁」
     document.documentElement.classList.add('shared-product-mode');
+    document.documentElement.classList.add('shared-product-initial');
+
+    var entryHome = document.getElementById('queenaHomeEntry');
+    if(entryHome){
+      entryHome.style.display = 'none';
+    }
 
     // 手機：只顯示這一個商品，不再顯示熱門/新品/其他全部商品
     if(typeof isMobileQueena === 'function' && isMobileQueena()){
@@ -7452,6 +7477,9 @@ function openSharedQueenaProduct(){
   }
 
   window.queenaShowEntryHome = function(){
+    document.documentElement.classList.remove('shared-product-initial');
+    document.documentElement.classList.remove('shared-product-mode');
+
     var entry = getEntry();
     var btn = getBackBtn();
 
@@ -7486,6 +7514,11 @@ function openSharedQueenaProduct(){
 
     if(btn){
       btn.addEventListener('click', function(){
+        var params = new URLSearchParams(window.location.search);
+        if(params.get('product')){
+          window.top.location.href = window.location.origin + '/';
+          return;
+        }
         window.queenaShowEntryHome();
       });
     }
