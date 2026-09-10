@@ -6817,6 +6817,14 @@ function renderMobileApp(){
 
   if(!isMobileQueena()) return;
 
+  // 分享商品頁已鎖定單一商品時，不可再被手機版重新渲染成「全部好物」
+  if(
+    document.documentElement.classList.contains('shared-product-mode') ||
+    document.documentElement.classList.contains('shared-product-initial')
+  ){
+    return;
+  }
+
   setupMobileHero();
   setMobileUpdateDate();
 
@@ -6972,7 +6980,11 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 
   window.addEventListener('resize',function(){
-    if(isMobileQueena()){
+    if(
+      isMobileQueena() &&
+      !document.documentElement.classList.contains('shared-product-mode') &&
+      !document.documentElement.classList.contains('shared-product-initial')
+    ){
       renderMobileApp();
     }
   });
