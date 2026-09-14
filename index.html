@@ -4979,7 +4979,33 @@ tryQuickLineAuth_();
 
 // ==============================
 // 讀取商品
+// 先顯示上次成功載入的商品，再於背景更新最新資料
 // ==============================
+
+const QUEENA_PRODUCTS_CACHE_KEY = 'queenaProductsCacheV1';
+let hasCachedProducts = false;
+
+try{
+  const cachedRaw = localStorage.getItem(QUEENA_PRODUCTS_CACHE_KEY);
+  const cachedProducts = cachedRaw ? JSON.parse(cachedRaw) : [];
+
+  if(Array.isArray(cachedProducts) && cachedProducts.length){
+    products = cachedProducts;
+    hasCachedProducts = true;
+
+    loading.style.display = 'none';
+    buildCategories();
+    renderFeatured();
+    render();
+    updateCart();
+
+    if(typeof renderMobileApp === 'function'){
+      renderMobileApp();
+    }
+  }
+}catch(e){
+  // 快取失敗不影響正常讀取
+}
 
 apiGet('products')
   .then(function(data){
@@ -4988,6 +5014,15 @@ apiGet('products')
       Array.isArray(data.products)
         ? data.products
         : [];
+
+    try{
+      localStorage.setItem(
+        QUEENA_PRODUCTS_CACHE_KEY,
+        JSON.stringify(products)
+      );
+    }catch(e){
+      // 儲存快取失敗不影響網站
+    }
 
     loading.style.display = 'none';
 
@@ -5010,6 +5045,12 @@ apiGet('products')
 
   })
   .catch(function(err){
+
+    // 已有舊商品快取時，不讓客人看到「0件／讀取失敗」
+    if(hasCachedProducts){
+      loading.style.display = 'none';
+      return;
+    }
 
     loading.innerHTML =
       '商品讀取失敗：' +
@@ -5823,7 +5864,7 @@ function createMessage(){
       '<div class="orderConfirmList">' + rows + '</div>' +
       moneyHtml +
       promoHtml +
-      '<div class="orderConfirmAfter">訂單送出後，可加 Queena 好友享優惠價付款</div>' +
+      '<div class="orderConfirmAfter">確認商品內容無誤後即可送出 ♡</div>' +
     '</div>'
   );
 }
@@ -5840,6 +5881,9 @@ document
     renderCartPanel();
 
     overlay.style.display = 'flex';
+
+    // 訂單送出前就先顯示 Queena 好友按鈕
+    showLineContactPrompt_(false);
 
   });
 
@@ -6014,7 +6058,7 @@ function startFullLineLogin_(items){
 // 真正送出清單
 // ==============================
 
-function showLineContactPrompt_(){
+function showLineContactPrompt_(sent){
 
   apiGet('lineAddFriend')
     .then(function(data){
@@ -6035,14 +6079,14 @@ function showLineContactPrompt_(){
         box.className = 'lineFriendPrompt';
       }
 
-      box.innerHTML =
-        '<div class="lineFriendPromptTitle">訂單已送出 ♡</div>' +
-        '<div class="lineFriendPromptText">接下來直接和 Queena 確認優惠與付款方式</div>' +
-        '<a class="lineFriendAddBtn" href="' +
-          escapeHtml(addUrl) +
-        '" target="_blank" rel="noopener">' +
-          '💗 加 Queena 好友｜享優惠價付款' +
-        '</a>';
+      box.innerHTML = sent
+        ? '<div class="lineFriendPromptTitle">訂單已送出 ♡</div>' +
+          '<div class="lineFriendPromptText">Queena 會盡快幫你確認</div>'
+        : '<a class="lineFriendAddBtn" href="' +
+            escapeHtml(addUrl) +
+          '" target="_blank" rel="noopener">' +
+            '💗 加 Queena 好友｜享優惠價付款' +
+          '</a>';
 
       const modal =
         document.querySelector(
@@ -6058,7 +6102,13 @@ function showLineContactPrompt_(){
           old.remove();
         }
 
-        modal.appendChild(box);
+        // 固定放在「LINE 確認訂單」正下方、「清空清單」上方
+        const clearButton = modal.querySelector('#clearBtn');
+        if(clearButton){
+          modal.insertBefore(box, clearButton);
+        }else{
+          modal.appendChild(box);
+        }
 
       }else{
 
@@ -6132,7 +6182,7 @@ function submitWishlist(items){
 
       alert('✓ 訂單已送出給 Queena ♡');
 
-      showLineContactPrompt_();
+      showLineContactPrompt_(true);
 
       cart = {};
 
