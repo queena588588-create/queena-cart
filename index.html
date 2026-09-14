@@ -3371,6 +3371,83 @@ html.queena-mobile body{
   .lineFriendAddBtn{width:100%;}
 }
 
+/* ===== Queena 訂單確認 ===== */
+.orderConfirmBox{
+  margin-top:14px;
+  padding:16px;
+  border:1px solid #eadfd9;
+  border-radius:18px;
+  background:#fffaf8;
+}
+.orderConfirmTitle{
+  font-size:16px;
+  font-weight:900;
+  color:#4d3a34;
+  margin-bottom:12px;
+}
+.orderConfirmList{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.orderConfirmRow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:start;
+  font-size:13px;
+  line-height:1.55;
+  color:#5f4c46;
+}
+.orderConfirmProduct{min-width:0;}
+.orderConfirmMeta{
+  color:#a8877b;
+  font-size:12px;
+}
+.orderConfirmPrice{
+  white-space:nowrap;
+  font-weight:800;
+  color:#7a5d53;
+}
+.orderConfirmDivider{
+  height:1px;
+  background:#eadfd9;
+  margin:13px 0;
+}
+.orderConfirmMoneyRow{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  font-size:13px;
+  color:#5f4c46;
+  margin:6px 0;
+}
+.orderConfirmMoneyRow.total{
+  font-size:15px;
+  font-weight:900;
+  color:#4d3a34;
+}
+.orderConfirmPromo{
+  margin-top:12px;
+  padding:11px 12px;
+  border-radius:13px;
+  background:#fff3f0;
+  color:#7a5d53;
+  font-size:12px;
+  line-height:1.6;
+}
+.orderConfirmAfter{
+  margin-top:11px;
+  text-align:center;
+  color:#9a8178;
+  font-size:12px;
+  line-height:1.55;
+}
+@media(max-width:760px){
+  .orderConfirmBox{padding:14px 13px;}
+  .orderConfirmRow{font-size:12.5px;}
+}
+
 /* ===== 商品完整介紹視窗 ===== */
 .productDetailTrigger{
   cursor:pointer;
@@ -4549,12 +4626,8 @@ html.shared-product-initial #queenaHomeEntry{
       🎟️ 已領取網站限定購物券<br>滿 $500 折 $30
     </div>
 
-        <div class="cartPriceNote">
-      ♡ 價格可能會有所不同，Queena 會盡快回覆優惠價給你唷 ♡
-    </div>
-
     <button id="sendBtn" class="actionBtn lineBtn">
-      LINE 確認身分並送出
+      LINE 確認訂單
     </button>
 
     <button id="clearBtn" class="actionBtn clearBtn">
@@ -5617,65 +5690,142 @@ function renderCartPanel(){
 // 建立文字清單
 // ==============================
 
+function parseQueenaPrice_(raw){
+
+  const text = String(raw || '').trim();
+
+  if(!text){
+    return { text:'', amount:null };
+  }
+
+  // 只有看起來像明確售價時才拿來計算，避免把「2件折520」等活動文字誤算成價格。
+  const compact = text.replace(/,/g,'');
+  const clearPrice = compact.match(/(?:NT\$|NTD|\$)\s*(\d+(?:\.\d+)?)/i);
+
+  if(!clearPrice){
+    return { text:text, amount:null };
+  }
+
+  const amount = Number(clearPrice[1]);
+
+  return {
+    text:text,
+    amount:Number.isFinite(amount) ? amount : null
+  };
+}
+
+function formatQueenaMoney_(amount){
+  return '$' + Number(amount || 0).toLocaleString('zh-TW');
+}
+
 function createMessage(){
 
   const items = Object.values(cart);
 
   if(items.length === 0){
-    return '<strong>🛍️ 我的清單</strong><br><br>還沒有加入商品 ♡';
+    return '<strong>🛍️ 訂單確認</strong><br><br>還沒有加入商品 ♡';
   }
 
-  const buy = [];
-  const ask = [];
+  let fixedSubtotal = 0;
+  let hasFixedPrice = false;
+  let hasPromoItem = false;
 
-  items.forEach(function(item){
+  const rows = items.map(function(item){
 
-    const line =
-      '・' +
-      escapeHtml(item.name) +
-      (
-        item.spec
-          ? ' <span class="summarySpec">（' +
-            escapeHtml(item.spec) +
-            '）</span>'
-          : ''
-      ) +
-      ' ×' +
-      item.qty;
+    const product =
+      products.find(function(p){
+        return p.name === item.name;
+      }) || {};
 
-    if(item.intent === 'ask'){
-      ask.push(line);
+    const priceInfo = parseQueenaPrice_(product.price);
+    const qty = Number(item.qty) || 1;
+    let priceHtml = '';
+
+    if(priceInfo.amount !== null){
+      const lineAmount = priceInfo.amount * qty;
+      fixedSubtotal += lineAmount;
+      hasFixedPrice = true;
+      priceHtml = formatQueenaMoney_(lineAmount);
     }else{
-      buy.push(line);
+      hasPromoItem = true;
+      priceHtml = '本期優惠 ♡';
     }
 
-  });
+    const meta = [];
 
-  let html =
-    '<strong>🛍️ 我的清單</strong>';
+    if(item.spec){
+      meta.push(escapeHtml(item.spec));
+    }
 
-  if(buy.length){
+    if(item.intent === 'ask'){
+      meta.push('想了解');
+    }
 
-    html +=
-      '<div class="summaryIntent">' +
-      '<b>🛒 我要買</b><br>' +
-      buy.join('<br>') +
-      '</div>';
+    return (
+      '<div class="orderConfirmRow">' +
+        '<div class="orderConfirmProduct">' +
+          '<div>' + escapeHtml(item.name) + ' ×' + qty + '</div>' +
+          (meta.length
+            ? '<div class="orderConfirmMeta">' + meta.join('・') + '</div>'
+            : '') +
+        '</div>' +
+        '<div class="orderConfirmPrice">' + priceHtml + '</div>' +
+      '</div>'
+    );
+  }).join('');
 
+  let couponHtml = '';
+  let currentSubtotal = fixedSubtotal;
+
+  if(hasQueenaCoupon()){
+    if(hasFixedPrice && fixedSubtotal >= 500){
+      currentSubtotal = Math.max(0, fixedSubtotal - 30);
+      couponHtml =
+        '<div class="orderConfirmMoneyRow">' +
+          '<span>購物券</span><strong>-$30</strong>' +
+        '</div>';
+    }else{
+      couponHtml =
+        '<div class="orderConfirmMoneyRow">' +
+          '<span>購物券</span><strong>滿 $500 折 $30</strong>' +
+        '</div>';
+    }
   }
 
-  if(ask.length){
+  let moneyHtml = '';
 
-    html +=
-      '<div class="summaryIntent">' +
-      '<b>💬 想了解</b><br>' +
-      ask.join('<br>') +
+  if(hasFixedPrice){
+    moneyHtml =
+      '<div class="orderConfirmDivider"></div>' +
+      '<div class="orderConfirmMoneyRow">' +
+        '<span>商品小計</span><strong>' + formatQueenaMoney_(fixedSubtotal) + '</strong>' +
+      '</div>' +
+      couponHtml +
+      '<div class="orderConfirmMoneyRow total">' +
+        '<span>目前小計</span><strong>' +
+          formatQueenaMoney_(currentSubtotal) +
+          (hasPromoItem ? '＋優惠商品' : '') +
+        '</strong>' +
       '</div>';
-
+  }else if(hasQueenaCoupon()){
+    moneyHtml =
+      '<div class="orderConfirmDivider"></div>' +
+      couponHtml;
   }
 
-  return html;
+  const promoHtml = hasPromoItem
+    ? '<div class="orderConfirmPromo">✨ 部分商品享本期活動優惠<br>Queena 會幫你確認最優惠的組合 ♡</div>'
+    : '';
 
+  return (
+    '<div class="orderConfirmBox">' +
+      '<div class="orderConfirmTitle">🛍️ 訂單確認</div>' +
+      '<div class="orderConfirmList">' + rows + '</div>' +
+      moneyHtml +
+      promoHtml +
+      '<div class="orderConfirmAfter">訂單送出後，可加 Queena 好友享優惠價付款</div>' +
+    '</div>'
+  );
 }
 
 
@@ -5850,7 +6000,7 @@ function startFullLineLogin_(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 確認身分並送出';
+        'LINE 確認訂單';
 
       alert(
         '還差一步 ♡ 請再點一次完成資料確認'
@@ -5886,11 +6036,12 @@ function showLineContactPrompt_(){
       }
 
       box.innerHTML =
-        '<div class="lineFriendPromptTitle">💚 加 Queena LINE，方便直接聯絡</div>' +
+        '<div class="lineFriendPromptTitle">訂單已送出 ♡</div>' +
+        '<div class="lineFriendPromptText">接下來直接和 Queena 確認優惠與付款方式</div>' +
         '<a class="lineFriendAddBtn" href="' +
           escapeHtml(addUrl) +
         '" target="_blank" rel="noopener">' +
-          '💚 加 Queena LINE，方便直接聯絡' +
+          '💗 加 Queena 好友｜享優惠價付款' +
         '</a>';
 
       const modal =
@@ -5977,9 +6128,9 @@ function submitWishlist(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 確認身分並送出';
+        'LINE 確認訂單';
 
-      alert('✓ 清單已送出給 Queena ♡');
+      alert('✓ 訂單已送出給 Queena ♡');
 
       showLineContactPrompt_();
 
@@ -6015,7 +6166,7 @@ function submitWishlist(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 確認身分並送出';
+        'LINE 確認訂單';
 
       alert(
         '送出失敗：' +
