@@ -5700,7 +5700,7 @@ function parseQueenaPrice_(raw){
 
   // 只有看起來像明確售價時才拿來計算，避免把「2件折520」等活動文字誤算成價格。
   const compact = text.replace(/,/g,'');
-  const clearPrice = compact.match(/(?:NT\$|NTD|\$)\s*(\d+(?:\.\d+)?)/i);
+  const clearPrice = compact.match(/^(?:NT\$|NTD|\$)?\s*(\d+(?:\.\d+)?)$/i);
 
   if(!clearPrice){
     return { text:text, amount:null };
