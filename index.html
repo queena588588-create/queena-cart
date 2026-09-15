@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -7885,100 +7886,5 @@ function openSharedQueenaProduct(){
   },100);
 })();
 </script>
-
-
-
-<script>
-/* =========================================================
-   2026-09-15 手機商品獨立保險載入
-   僅手機啟用；桌機、訂單、LINE、價格流程完全不動。
-========================================================= */
-(function(){
-  if(!window.matchMedia || !window.matchMedia('(max-width:760px)').matches) return;
-
-  var mobileProductLoadBusy = false;
-  var mobileProductLoadDone = false;
-
-  function hasProducts(){
-    return Array.isArray(window.products || (typeof products !== 'undefined' ? products : [])) &&
-      (window.products || (typeof products !== 'undefined' ? products : [])).length > 0;
-  }
-
-  function paintMobile(){
-    try{
-      if(typeof renderMobileApp === 'function') renderMobileApp();
-      if(typeof renderMobileAllProducts === 'function') renderMobileAllProducts();
-    }catch(e){}
-  }
-
-  async function fetchMobileProducts(attempt){
-    if(mobileProductLoadBusy || mobileProductLoadDone) return;
-    mobileProductLoadBusy = true;
-    try{
-      var res = await fetch('/api?action=products&_mobile=' + Date.now() + '_' + attempt, {
-        method:'GET',
-        cache:'no-store',
-        headers:{'accept':'application/json'}
-      });
-      var text = await res.text();
-      var trimmed = String(text || '').trim();
-      if(!res.ok || !trimmed || trimmed.charAt(0) === '<'){
-        throw new Error('商品資料暫時未就緒');
-      }
-      var data = JSON.parse(trimmed);
-      var list = data && Array.isArray(data.products) ? data.products : [];
-      if(!list.length) throw new Error('商品資料為空');
-
-      products = list;
-      mobileProductLoadDone = true;
-      mobileProductLoadBusy = false;
-      paintMobile();
-
-      var loadingEl = document.getElementById('loading');
-      if(loadingEl) loadingEl.style.display='none';
-      return;
-    }catch(e){
-      mobileProductLoadBusy = false;
-      if(attempt < 6){
-        setTimeout(function(){ fetchMobileProducts(attempt + 1); }, 450 * attempt);
-      }
-    }
-  }
-
-  function startMobileRescue(){
-    if(hasProducts()){
-      mobileProductLoadDone = true;
-      paintMobile();
-      return;
-    }
-    fetchMobileProducts(1);
-  }
-
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', function(){
-      setTimeout(startMobileRescue, 80);
-    });
-  }else{
-    setTimeout(startMobileRescue, 80);
-  }
-
-  // iPhone 回上一頁 / BFCache 時再確認一次，避免畫面恢復但商品陣列沒有重畫。
-  window.addEventListener('pageshow', function(){
-    setTimeout(function(){
-      if(hasProducts()) paintMobile();
-      else {
-        mobileProductLoadDone = false;
-        startMobileRescue();
-      }
-    },120);
-  });
-})();
-</script>
 </body>
 </html>
-<div style="
-  text-align:center;
-  padding:28px 16px 36px;
-  color:#7f6a63;
-  font-size:14px;
-">
