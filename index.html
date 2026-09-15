@@ -4722,7 +4722,12 @@ function setupQueenaCoupon(){
   }
 }
 
-setupQueenaCoupon();
+// Safari：儲存空間被限制時，優惠券功能不能阻斷後面的商品載入。
+try{
+  setupQueenaCoupon();
+}catch(e){
+  console.warn('Coupon storage unavailable:', e);
+}
 
 let lineProfile = null;
 const lineRememberTokenFromServer = '';
