@@ -7238,29 +7238,10 @@ function getQueenaBaseUrl(){
 }
 
 function getProductShareUrl(productName){
-
-  const targetName =
-    String(productName || '').trim();
-
-  const matchedProduct =
-    Array.isArray(products)
-      ? products.find(function(product){
-          return String(product.name || '').trim() ===
-            targetName;
-        })
-      : null;
-
-  if(matchedProduct && matchedProduct.row){
-    return window.location.origin +
-      '/p/' +
-      encodeURIComponent(
-        String(matchedProduct.row)
-      );
-  }
-
-  return window.location.origin +
-    '/share?name=' +
-    encodeURIComponent(targetName);
+  // 分享網址統一使用首頁真正會讀取的 ?product= 參數。
+  // 不再使用 /p/row 或 /share?name，避免 FB / IG 開啟後掉回全部商品。
+  const targetName = String(productName || '').trim();
+  return window.location.origin + '/?product=' + encodeURIComponent(targetName);
 }
 
 function showShareToast(text){
@@ -7607,13 +7588,23 @@ function openSharedQueenaProduct(){
     var mobile = typeof isMobileQueena === 'function' && isMobileQueena();
     var productReady = typeof products !== 'undefined' && Array.isArray(products) && products.length > 0;
 
+    // 首頁點進商城時，商品尚未載入完成就繼續等；
+    // 不准先把首頁關掉後留下一個空商城。
+    if(!productReady){ return false; }
+
     if(mode === 'all'){
+      if(mobile && typeof renderMobileApp === 'function'){
+        try{ renderMobileApp(); }catch(e){}
+      }else{
+        try{ if(typeof buildCategories === 'function') buildCategories(); }catch(e){}
+        try{ if(typeof renderFeatured === 'function') renderFeatured(); }catch(e){}
+        try{ if(typeof render === 'function') render(); }catch(e){}
+      }
+      try{ if(typeof updateCart === 'function') updateCart(); }catch(e){}
       pendingTarget = null;
       window.scrollTo({top:0,behavior:'auto'});
       return true;
     }
-
-    if(!productReady){ return false; }
 
     if(mobile){
       if(typeof renderMobileAllProducts !== 'function'){ return false; }
@@ -7722,6 +7713,16 @@ function openSharedQueenaProduct(){
   }
 
   window.queenaShowEntryHome = function(){
+    // 分享商品網址期間，首頁永遠不能蓋回來。
+    try{
+      var sharedParams = new URLSearchParams(window.location.search);
+      if(sharedParams.get('product')){
+        var sharedEntry = getEntry();
+        if(sharedEntry) sharedEntry.style.display = 'none';
+        return;
+      }
+    }catch(e){}
+
     document.documentElement.classList.remove('shared-product-initial');
     document.documentElement.classList.remove('shared-product-mode');
 
@@ -7908,6 +7909,13 @@ function openSharedQueenaProduct(){
 
 
 
+
+
+<style id="queenaSharedProductHardGuard">
+/* 分享商品網址：首頁遮罩永遠不得覆蓋單一商品頁 */
+html.shared-product-initial #queenaHomeEntry,
+html.shared-product-mode #queenaHomeEntry{display:none !important;}
+</style>
 
 </body>
 </html>
