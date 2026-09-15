@@ -4630,8 +4630,6 @@ html.shared-product-initial #queenaHomeEntry{
       LINE 確認訂單
     </button>
 
-    <div id="lineFriendPrompt" class="lineFriendPrompt" style="display:none;"></div>
-
     <button id="clearBtn" class="actionBtn clearBtn">
       🗑️ 清空清單
     </button>
@@ -4650,22 +4648,6 @@ html.shared-product-initial #queenaHomeEntry{
 <script>
 
 let products = [];
-
-function queenaMobileDebug_(message){
-  if(!window.matchMedia || !window.matchMedia('(max-width:760px)').matches) return;
-  let box = document.getElementById('queenaMobileDebug');
-  if(!box){
-    box = document.createElement('div');
-    box.id = 'queenaMobileDebug';
-    box.style.cssText =
-      'position:fixed;top:6px;left:6px;right:6px;z-index:999999;' +
-      'background:#fff3f5;border:1px solid #e9b8c0;color:#7a3f49;' +
-      'padding:7px 10px;border-radius:10px;font:12px/1.35 sans-serif;' +
-      'box-shadow:0 2px 8px rgba(0,0,0,.12);word-break:break-all;';
-    document.body.appendChild(box);
-  }
-  box.textContent = '手機診斷｜' + message;
-}
 let activeCategory = '全部';
 let cart = {};
 
@@ -4999,34 +4981,28 @@ tryQuickLineAuth_();
 // 讀取商品
 // ==============================
 
-queenaMobileDebug_('開始讀商品…');
-
 apiGet('products')
   .then(function(data){
-
-    const receivedCount =
-      data && Array.isArray(data.products)
-        ? data.products.length
-        : 0;
 
     products =
       Array.isArray(data.products)
         ? data.products
         : [];
 
-    queenaMobileDebug_(
-      'API成功 ' + receivedCount +
-      '件｜products=' + products.length
-    );
-
     loading.style.display = 'none';
 
-    buildCategories();
-    renderFeatured();
-    render();
-    updateCart();
+    // 手機先直接吃到 API 商品資料並渲染，避免桌機渲染流程中的例外
+    // 阻斷手機商品顯示；桌機原本流程完全保留。
+    if(typeof renderMobileApp === 'function' && window.matchMedia('(max-width:760px)').matches){
+      try{ renderMobileApp(); }catch(e){}
+    }
 
-    if(typeof renderMobileApp === 'function'){
+    try{ buildCategories(); }catch(e){}
+    try{ renderFeatured(); }catch(e){}
+    try{ render(); }catch(e){}
+    try{ updateCart(); }catch(e){}
+
+    if(typeof renderMobileApp === 'function' && !window.matchMedia('(max-width:760px)').matches){
       renderMobileApp();
     }
 
@@ -5040,11 +5016,6 @@ apiGet('products')
 
   })
   .catch(function(err){
-
-    queenaMobileDebug_(
-      'API失敗｜' +
-      (err && err.message ? err.message : String(err))
-    );
 
     loading.innerHTML =
       '商品讀取失敗：' +
@@ -5858,7 +5829,7 @@ function createMessage(){
       '<div class="orderConfirmList">' + rows + '</div>' +
       moneyHtml +
       promoHtml +
-      '<div class="orderConfirmAfter">確認商品內容無誤後即可送出 ♡</div>' +
+      '<div class="orderConfirmAfter">訂單送出後，可加 Queena 好友享優惠價付款</div>' +
     '</div>'
   );
 }
@@ -5873,7 +5844,6 @@ document
   .addEventListener('click', function(){
 
     renderCartPanel();
-    showLineContactPrompt_();
 
     overlay.style.display = 'flex';
 
@@ -6052,9 +6022,6 @@ function startFullLineLogin_(items){
 
 function showLineContactPrompt_(){
 
-  const box = document.getElementById('lineFriendPrompt');
-  if(!box) return;
-
   apiGet('lineAddFriend')
     .then(function(data){
 
@@ -6063,24 +6030,50 @@ function showLineContactPrompt_(){
           ? String(data.url)
           : '';
 
-      if(!addUrl){
-        box.style.display = 'none';
-        return;
+      if(!addUrl) return;
+
+      let box =
+        document.getElementById('lineFriendPrompt');
+
+      if(!box){
+        box = document.createElement('div');
+        box.id = 'lineFriendPrompt';
+        box.className = 'lineFriendPrompt';
       }
 
       box.innerHTML =
+        '<div class="lineFriendPromptTitle">訂單已送出 ♡</div>' +
+        '<div class="lineFriendPromptText">接下來直接和 Queena 確認優惠與付款方式</div>' +
         '<a class="lineFriendAddBtn" href="' +
           escapeHtml(addUrl) +
         '" target="_blank" rel="noopener">' +
           '💗 加 Queena 好友｜享優惠價付款' +
         '</a>';
 
-      box.style.display = 'block';
+      const modal =
+        document.querySelector(
+          '.cartModal, .modalContent, .cartPanel, #cartPanel'
+        );
+
+      if(modal){
+
+        const old =
+          modal.querySelector('#lineFriendPrompt');
+
+        if(old && old !== box){
+          old.remove();
+        }
+
+        modal.appendChild(box);
+
+      }else{
+
+        document.body.appendChild(box);
+      }
 
     })
     .catch(function(){
-      box.style.display = 'none';
-      // 好友按鈕載入失敗不影響訂單送出
+      // 加好友按鈕失敗不影響清單送出
     });
 }
 
@@ -6145,6 +6138,7 @@ function submitWishlist(items){
 
       alert('✓ 訂單已送出給 Queena ♡');
 
+      showLineContactPrompt_();
 
       cart = {};
 
@@ -6946,11 +6940,6 @@ function renderMobileAllProducts(){
 
   renderMobileCategories();
 
-  queenaMobileDebug_(
-    '準備render｜products=' +
-    (Array.isArray(products) ? products.length : '不是陣列')
-  );
-
   const title =
     document.getElementById('mAllTitle');
 
@@ -6971,12 +6960,6 @@ function renderMobileAllProducts(){
 
   const result =
     mobileFilterResult();
-
-  queenaMobileDebug_(
-    'render完成｜products=' +
-    (Array.isArray(products) ? products.length : '不是陣列') +
-    '｜result=' + result.length
-  );
 
   const count =
     document.getElementById('mResultCount');
@@ -7095,13 +7078,6 @@ document.addEventListener('DOMContentLoaded',function(){
 
   setupMobileHero();
   setMobileUpdateDate();
-
-  // 手機版補一次完整渲染：
-  // 商品 API 有時會比手機版函式更早完成，造成第一次載入顯示 0 件。
-  // DOM 完成後再 render 一次，可同時涵蓋 Safari / IG 內建瀏覽器。
-  if(typeof renderMobileApp === 'function'){
-    renderMobileApp();
-  }
 
   const search =
     document.getElementById('mSearch');
