@@ -4243,6 +4243,7 @@ html.shared-product-initial #queenaHomeEntry::after{
     var product = String(params.get('product') || '').trim();
     if(product){
       document.documentElement.classList.add('shared-product-initial');
+      document.documentElement.setAttribute('data-queena-share','1');
     }
   }catch(e){}
 })();
@@ -4251,6 +4252,12 @@ html.shared-product-initial #queenaHomeEntry::after{
 <style id="queenaSharedProductInitialGuardStyle">
 html.shared-product-initial #queenaHomeEntry{
   display:none !important;
+}
+/* 分享網址從第一個畫面就完全略過首頁遮罩 */
+html[data-queena-share="1"] #queenaHomeEntry{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
 }
 </style>
 
@@ -5020,6 +5027,13 @@ tryQuickLineAuth_();
 // ==============================
 // 讀取商品
 // ==============================
+// Safari / FB / IG 共用同一個商品載入狀態；資料回來前不畫空清單。
+try{
+  var __mAllGridLoading = document.getElementById('mAllGrid');
+  if(__mAllGridLoading){
+    __mAllGridLoading.innerHTML = '<div style="padding:32px 16px;text-align:center;color:#7f6a63">商品載入中 ♡</div>';
+  }
+}catch(e){}
 
 apiGet('products')
   .then(function(data){
@@ -7351,12 +7365,27 @@ function openSharedQueenaProduct(){
 
     if(!decoded) return;
 
-    const matched =
-      products.filter(function(p){
-        return String(p.name || '').trim() === decoded;
-      });
+    function normalizeSharedName_(value){
+      return String(value || '')
+        .normalize ? String(value || '').normalize('NFKC').replace(/\s+/g,' ').trim().toLowerCase()
+                   : String(value || '').replace(/\s+/g,' ').trim().toLowerCase();
+    }
+
+    const wantedName = normalizeSharedName_(decoded);
+    const matched = products.filter(function(p){
+      return normalizeSharedName_(p.name) === wantedName;
+    });
 
     if(matched.length === 0){
+      document.documentElement.classList.add('shared-product-mode');
+      var entryMissing = document.getElementById('queenaHomeEntry');
+      if(entryMissing) entryMissing.style.display = 'none';
+      var mobileGridMissing = document.getElementById('mAllGrid');
+      var mobileTitleMissing = document.getElementById('mAllTitle');
+      if(mobileTitleMissing) mobileTitleMissing.textContent = '分享商品';
+      if(mobileGridMissing) mobileGridMissing.innerHTML = '<div style="padding:32px 16px;text-align:center;color:#7f6a63">商品連結已更新，請回首頁重新分享一次 ♡</div>';
+      var desktopGridMissing = document.getElementById('grid');
+      if(desktopGridMissing) desktopGridMissing.innerHTML = '<div style="padding:32px 16px;text-align:center;color:#7f6a63">商品連結已更新，請回首頁重新分享一次 ♡</div>';
       return;
     }
 
@@ -7725,6 +7754,7 @@ function openSharedQueenaProduct(){
 
     document.documentElement.classList.remove('shared-product-initial');
     document.documentElement.classList.remove('shared-product-mode');
+    document.documentElement.removeAttribute('data-queena-share');
 
     var entry = getEntry();
     var btn = getBackBtn();
