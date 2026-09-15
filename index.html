@@ -7336,6 +7336,16 @@ document.addEventListener('DOMContentLoaded',function(){
     }
   });
 
+  // Safari 修正：商品 API 可能比手機版函式更早完成。
+  // DOM 全部完成後一定再畫一次，避免 products 已有資料但畫面仍停在「商品載入中」。
+  if(
+    isMobileQueena() &&
+    !document.documentElement.classList.contains('shared-product-mode') &&
+    !document.documentElement.classList.contains('shared-product-initial')
+  ){
+    try{ renderMobileApp(); }catch(e){}
+  }
+
 });
 </script>
 
