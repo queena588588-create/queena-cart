@@ -1,12 +1,15 @@
 const GAS_URL =
   'https://script.google.com/macros/s/AKfycbz3cGUC6hsUJfhKJJ-kCznEaYtwiBKcTPpBO-EK40ZB7q0cp4sHjhUye-zN4p1bcQ8s/exec';
 
-function jsonResponse(data, status = 200) {
+const PRODUCT_CACHE_SECONDS = 60;
+
+function jsonResponse(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'content-type': 'application/json; charset=UTF-8',
-      'cache-control': 'no-store, no-cache, must-revalidate'
+      'cache-control': 'no-store, no-cache, must-revalidate',
+      ...extraHeaders
     }
   });
 }
@@ -29,6 +32,7 @@ async function readGasJson(url, options, attempt = 1) {
     redirect: 'manual'
   });
 
+  // GAS 常會先 302 到 googleusercontent
   if (res.status >= 300 && res.status < 400) {
     const location = res.headers.get('location');
 
@@ -70,19 +74,85 @@ async function readGasJson(url, options, attempt = 1) {
     ok: false,
     status: res.status || 502,
     text: text,
-    message: 'GAS 暫時沒有回傳 JSON，請重新整理後再試'
+    message: '商品資料暫時讀取不到，請重新整理後再試'
   };
 }
 
-async function proxyGet(request) {
+async function getCachedProducts(request, env) {
+  const cache = caches.default;
+
+  // 固定 cache key，不讓前端的 _cb 造成每次都重新打 GAS
+  const cacheKey =
+    new Request(
+      new URL('/__queena_products_cache__', request.url).toString(),
+      { method: 'GET' }
+    );
+
+  const cached = await cache.match(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  const target = new URL(GAS_URL);
+  target.searchParams.set('api', 'products');
+
+  const result = await readGasJson(
+    target.toString(),
+    {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json,text/plain,*/*',
+        'cache-control': 'no-cache'
+      }
+    }
+  );
+
+  if (!result.ok) {
+    return jsonResponse(
+      {
+        success: false,
+        message: result.message
+      },
+      502
+    );
+  }
+
+  const response = new Response(result.text, {
+    status: 200,
+    headers: {
+      'content-type': 'application/json; charset=UTF-8',
+      'cache-control':
+        'public, max-age=0, s-maxage=' + PRODUCT_CACHE_SECONDS
+    }
+  });
+
+  // 不阻塞客人畫面
+  if (env && env.ctx && typeof env.ctx.waitUntil === 'function') {
+    env.ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  } else {
+    try {
+      await cache.put(cacheKey, response.clone());
+    } catch (_) {}
+  }
+
+  return response;
+}
+
+async function proxyGet(request, env) {
   const url = new URL(request.url);
   const action = url.searchParams.get('action') || '';
+
+  // 商品資料使用 Cloudflare 60 秒暫存
+  if (action === 'products') {
+    return getCachedProducts(request, env);
+  }
 
   const target = new URL(GAS_URL);
   target.searchParams.set('api', action);
 
   for (const [key, value] of url.searchParams.entries()) {
-    if (key !== 'action') {
+    if (key !== 'action' && key !== '_cb') {
       target.searchParams.set(key, value);
     }
   }
@@ -149,28 +219,26 @@ async function proxyPost(request) {
       )
     );
   } else {
-    Object.entries(payload || {}).forEach(
-      function(entry) {
-        const key = entry[0];
-        const value = entry[1];
+    Object.entries(payload || {}).forEach(function(entry) {
+      const key = entry[0];
+      const value = entry[1];
 
-        body.set(
-          key,
-          typeof value === 'string'
-            ? value
-            : JSON.stringify(value)
-        );
-      }
-    );
+      body.set(
+        key,
+        typeof value === 'string'
+          ? value
+          : JSON.stringify(value)
+      );
+    });
   }
 
+  // POST 絕對不自動重送，避免重複訂單
   let res = await fetch(GAS_URL, {
     method: 'POST',
     headers: {
       'content-type':
         'application/x-www-form-urlencoded;charset=UTF-8',
-      'accept':
-        'application/json,text/plain,*/*'
+      'accept': 'application/json,text/plain,*/*'
     },
     body: body.toString(),
     redirect: 'manual'
@@ -184,10 +252,8 @@ async function proxyPost(request) {
         method: 'GET',
         redirect: 'follow',
         headers: {
-          'accept':
-            'application/json,text/plain,*/*',
-          'cache-control':
-            'no-cache'
+          'accept': 'application/json,text/plain,*/*',
+          'cache-control': 'no-cache'
         }
       });
     }
@@ -222,22 +288,24 @@ async function proxyPost(request) {
   return new Response(text, {
     status: 200,
     headers: {
-      'content-type':
-        'application/json; charset=UTF-8',
-      'cache-control':
-        'no-store, no-cache, must-revalidate'
+      'content-type': 'application/json; charset=UTF-8',
+      'cache-control': 'no-store, no-cache, must-revalidate'
     }
   });
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
 
       if (url.pathname === '/api') {
         if (request.method === 'GET') {
-          return await proxyGet(request);
+          // 把 ctx 傳進商品 cache
+          const workerEnv = Object.assign({}, env || {});
+          workerEnv.ctx = ctx;
+
+          return await proxyGet(request, workerEnv);
         }
 
         if (request.method === 'POST') {
@@ -253,7 +321,29 @@ export default {
         );
       }
 
-      return env.ASSETS.fetch(request);
+      // 首頁 / index.html 不做 Cloudflare cache，
+      // 避免 iPhone Safari 一直吃到舊版 HTML
+      const assetResponse = await env.ASSETS.fetch(request);
+
+      const headers = new Headers(assetResponse.headers);
+
+      if (
+        url.pathname === '/' ||
+        url.pathname === '/index.html'
+      ) {
+        headers.set(
+          'cache-control',
+          'no-store, no-cache, must-revalidate, max-age=0'
+        );
+        headers.set('pragma', 'no-cache');
+        headers.set('expires', '0');
+      }
+
+      return new Response(assetResponse.body, {
+        status: assetResponse.status,
+        statusText: assetResponse.statusText,
+        headers: headers
+      });
 
     } catch (err) {
       return jsonResponse(
