@@ -5031,26 +5031,30 @@ apiGet('products')
 
     loading.style.display = 'none';
 
-    // 手機先直接吃到 API 商品資料並渲染，避免桌機渲染流程中的例外
-    // 阻斷手機商品顯示；桌機原本流程完全保留。
-    if(typeof renderMobileApp === 'function' && window.matchMedia('(max-width:760px)').matches){
-      try{ renderMobileApp(); }catch(e){}
-    }
+    // 分享商品網址優先處理：有 ?product= 時，禁止先畫全部商品。
+    // 等商品 API 真正回來後，直接進入單一商品分享頁。
+    var sharedProductParam = '';
+    try{
+      sharedProductParam = String(
+        new URLSearchParams(window.location.search).get('product') || ''
+      ).trim();
+    }catch(e){}
 
-    try{ buildCategories(); }catch(e){}
-    try{ renderFeatured(); }catch(e){}
-    try{ render(); }catch(e){}
-    try{ updateCart(); }catch(e){}
-
-    if(typeof renderMobileApp === 'function' && !window.matchMedia('(max-width:760px)').matches){
-      renderMobileApp();
-    }
-
-    setTimeout(function(){
+    if(sharedProductParam){
+      try{ updateCart(); }catch(e){}
       if(typeof openSharedQueenaProduct === 'function'){
         openSharedQueenaProduct();
       }
-    },120);
+    }else{
+      // 一般商城：商品資料到齊後才開始渲染。
+      try{ buildCategories(); }catch(e){}
+      try{ renderFeatured(); }catch(e){}
+      try{ render(); }catch(e){}
+      try{ updateCart(); }catch(e){}
+      if(typeof renderMobileApp === 'function'){
+        try{ renderMobileApp(); }catch(e){}
+      }
+    }
 
     tryAutoSubmitPending_();
 
@@ -6953,6 +6957,21 @@ function mobileFilterResult(){
 function renderMobileAllProducts(){
 
   if(!isMobileQueena()) return;
+
+
+  // 商品 API 尚未完成時，不把空陣列誤判成「沒有商品」。
+  // Safari 連線較慢時維持載入狀態，資料回來後再一次渲染。
+  if(!Array.isArray(products) || products.length === 0){
+    const count = document.getElementById('mResultCount');
+    const grid = document.getElementById('mAllGrid');
+    const empty = document.getElementById('mEmpty');
+    if(count) count.textContent = '載入中…';
+    if(grid){
+      grid.innerHTML = '<div style="grid-column:1/-1;padding:28px 4px;text-align:center;color:#a68d84;font-size:12px;">商品載入中 ♡</div>';
+    }
+    if(empty) empty.style.display = 'none';
+    return;
+  }
 
   renderMobileCategories();
 
