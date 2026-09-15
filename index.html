@@ -4,7 +4,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script defer charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Queena 購物清單</title>
@@ -5037,85 +5037,150 @@ try{
 }catch(e){}
 
 // ==============================
-// 商品資料載入｜手機 / Safari / Chrome 穩定版
+// 商品資料載入｜Queena 穩定版
+// 先用 XHR 讀取；15 秒未完成就中止並改用 fetch 備援。
 // ==============================
-function loadQueenaProducts(){
-  return fetch('/api?action=products', {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' }
-  })
-  .then(function(res){
-    if(!res.ok) throw new Error('商品 API ' + res.status);
-    return res.json();
-  })
-  .then(function(data){
-    if(!data || data.success === false || !Array.isArray(data.products) || data.products.length === 0){
-      throw new Error(data && data.message ? data.message : '商品資料為空');
+function applyQueenaProducts(data){
+  if(!data || data.success === false || !Array.isArray(data.products) || data.products.length === 0){
+    throw new Error(data && data.message ? data.message : '商品資料為空');
+  }
+
+  products = data.products;
+
+  try{ loading.style.display = 'none'; }catch(e){}
+  try{
+    var desktopEmpty = document.getElementById('empty');
+    if(desktopEmpty) desktopEmpty.style.display = 'none';
+  }catch(e){}
+  try{
+    var mobileEmpty = document.getElementById('mEmpty');
+    if(mobileEmpty) mobileEmpty.style.display = 'none';
+  }catch(e){}
+
+  var sharedProductParam = '';
+  try{
+    sharedProductParam = String(new URLSearchParams(window.location.search).get('product') || '').trim();
+  }catch(e){}
+
+  if(sharedProductParam){
+    try{ updateCart(); }catch(e){}
+    if(typeof openSharedQueenaProduct === 'function'){
+      try{ openSharedQueenaProduct(); }catch(e){}
     }
-
-    products = data.products;
-
-    // API 成功後，桌機與手機都重新畫一次。
-    try{ loading.style.display = 'none'; }catch(e){}
+  }else{
+    try{ document.documentElement.classList.remove('shared-product-mode','shared-product-initial'); }catch(e){}
+    try{ buildCategories(); }catch(e){}
+    try{ renderFeatured(); }catch(e){}
+    try{ render(); }catch(e){}
+    try{ updateCart(); }catch(e){}
     try{
-      var desktopEmpty = document.getElementById('empty');
-      if(desktopEmpty) desktopEmpty.style.display = 'none';
+      if(typeof renderMobileApp === 'function') renderMobileApp();
     }catch(e){}
     try{
-      var mobileEmpty = document.getElementById('mEmpty');
-      if(mobileEmpty) mobileEmpty.style.display = 'none';
+      if(typeof renderMobileAllProducts === 'function') renderMobileAllProducts();
     }catch(e){}
+  }
 
-    var sharedProductParam = '';
-    try{
-      sharedProductParam = String(new URLSearchParams(window.location.search).get('product') || '').trim();
-    }catch(e){}
+  try{ tryAutoSubmitPending_(); }catch(e){}
+  return data;
+}
 
-    if(sharedProductParam){
-      try{ updateCart(); }catch(e){}
-      if(typeof openSharedQueenaProduct === 'function'){
-        try{ openSharedQueenaProduct(); }catch(e){}
-      }
-    }else{
-      // 一般商城一定回到正常模式，不讓分享頁狀態干擾首頁。
-      try{ document.documentElement.classList.remove('shared-product-mode','shared-product-initial'); }catch(e){}
-      try{ buildCategories(); }catch(e){}
-      try{ renderFeatured(); }catch(e){}
-      try{ render(); }catch(e){}
-      try{ updateCart(); }catch(e){}
-      if(typeof renderMobileApp === 'function'){
-        try{ renderMobileApp(); }catch(e){}
-      }
-      if(typeof renderMobileAllProducts === 'function'){
-        try{ renderMobileAllProducts(); }catch(e){}
-      }
-    }
+function loadQueenaProductsXHR(){
+  return new Promise(function(resolve, reject){
+    var xhr = new XMLHttpRequest();
+    var url = '/api?action=products&_cb=' + Date.now();
 
-    try{ tryAutoSubmitPending_(); }catch(e){}
-    return data;
+    xhr.open('GET', url, true);
+    xhr.timeout = 15000;
+    try{ xhr.setRequestHeader('Accept','application/json'); }catch(e){}
+
+    xhr.onload = function(){
+      if(xhr.status < 200 || xhr.status >= 300){
+        reject(new Error('商品 API ' + xhr.status));
+        return;
+      }
+
+      var text = String(xhr.responseText || '').trim();
+      if(!text || text.charAt(0) === '<'){
+        reject(new Error('商品 API 回傳格式錯誤'));
+        return;
+      }
+
+      try{
+        resolve(JSON.parse(text));
+      }catch(e){
+        reject(new Error('商品 JSON 解析失敗'));
+      }
+    };
+
+    xhr.onerror = function(){ reject(new Error('商品連線失敗')); };
+    xhr.ontimeout = function(){ reject(new Error('商品連線逾時')); };
+    xhr.onabort = function(){ reject(new Error('商品連線中止')); };
+
+    xhr.send();
   });
 }
 
-loadQueenaProducts().catch(function(err){
-  console.error('Queena product load failed:', err);
-  // 第一次失敗才自動重抓一次；不再無限卡「商品載入中」。
-  setTimeout(function(){
-    loadQueenaProducts().catch(function(err2){
-      console.error('Queena product retry failed:', err2);
-      try{
-        if(loading){
-          loading.innerHTML = '商品讀取失敗，請重新整理頁面 ♡';
-        }
-      }catch(e){}
-      try{
-        var grid = document.getElementById('mAllGrid');
-        if(grid){
-          grid.innerHTML = '<div style="grid-column:1/-1;padding:28px 8px;text-align:center;color:#a68d84;font-size:12px;">商品讀取失敗，請重新整理頁面 ♡</div>';
-        }
-      }catch(e){}
-    });
-  }, 1200);
-});
+function loadQueenaProductsFetch(){
+  var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  var timer = null;
+
+  if(controller){
+    timer = setTimeout(function(){
+      try{ controller.abort(); }catch(e){}
+    }, 15000);
+  }
+
+  return fetch('/api?action=products&_cb=' + Date.now(), {
+    method: 'GET',
+    cache: 'no-store',
+    headers: { 'Accept': 'application/json' },
+    signal: controller ? controller.signal : undefined
+  })
+  .then(function(res){
+    if(!res.ok) throw new Error('商品 API ' + res.status);
+    return res.text();
+  })
+  .then(function(text){
+    var clean = String(text || '').trim();
+    if(!clean || clean.charAt(0) === '<') throw new Error('商品 API 回傳格式錯誤');
+    return JSON.parse(clean);
+  })
+  .finally(function(){
+    if(timer) clearTimeout(timer);
+  });
+}
+
+function showQueenaProductLoadError(){
+  try{
+    if(loading){
+      loading.innerHTML = '商品讀取失敗，請點重新載入 ♡';
+    }
+  }catch(e){}
+
+  try{
+    var grid = document.getElementById('mAllGrid');
+    if(grid){
+      grid.innerHTML =
+        '<div style="grid-column:1/-1;padding:28px 8px;text-align:center;color:#a68d84;font-size:12px;">' +
+        '商品讀取失敗 ♡<br><br>' +
+        '<button type="button" onclick="location.reload()" style="border:1px solid #ead9d5;background:#fff;border-radius:999px;padding:10px 18px;color:#7f6a63;">重新載入商品</button>' +
+        '</div>';
+    }
+  }catch(e){}
+}
+
+// 不再讓某一個 fetch 永遠卡住「商品載入中」。
+loadQueenaProductsXHR()
+  .then(applyQueenaProducts)
+  .catch(function(xhrErr){
+    console.warn('Queena XHR product load failed:', xhrErr);
+    return loadQueenaProductsFetch().then(applyQueenaProducts);
+  })
+  .catch(function(finalErr){
+    console.error('Queena product load failed:', finalErr);
+    showQueenaProductLoadError();
+  });
 
 
 // ==============================
