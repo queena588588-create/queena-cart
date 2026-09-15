@@ -18,6 +18,7 @@ function looksLikeJson(text) {
 
 async function readGasJson(url, options, attempt = 1) {
   const requestUrl = new URL(url);
+
   requestUrl.searchParams.set(
     '_cf_try',
     String(Date.now()) + '_' + attempt
@@ -165,17 +166,13 @@ async function proxyPost(request) {
 
   let res = await fetch(GAS_URL, {
     method: 'POST',
-
     headers: {
       'content-type':
         'application/x-www-form-urlencoded;charset=UTF-8',
-
       'accept':
         'application/json,text/plain,*/*'
     },
-
     body: body.toString(),
-
     redirect: 'manual'
   });
 
@@ -185,13 +182,10 @@ async function proxyPost(request) {
     if (location) {
       res = await fetch(location, {
         method: 'GET',
-
         redirect: 'follow',
-
         headers: {
           'accept':
             'application/json,text/plain,*/*',
-
           'cache-control':
             'no-cache'
         }
@@ -227,11 +221,9 @@ async function proxyPost(request) {
 
   return new Response(text, {
     status: 200,
-
     headers: {
       'content-type':
         'application/json; charset=UTF-8',
-
       'cache-control':
         'no-store, no-cache, must-revalidate'
     }
@@ -244,7 +236,6 @@ export default {
       const url = new URL(request.url);
 
       if (url.pathname === '/api') {
-
         if (request.method === 'GET') {
           return await proxyGet(request);
         }
@@ -265,11 +256,9 @@ export default {
       return env.ASSETS.fetch(request);
 
     } catch (err) {
-
       return jsonResponse(
         {
           success: false,
-
           message:
             err && err.message
               ? err.message
