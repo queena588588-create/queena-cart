@@ -5011,7 +5011,12 @@ function tryQuickLineAuth_(done){
 // 先恢復登入前保存的購物清單
 // ==============================
 
-const savedCart = localStorage.getItem('queenaPendingCart');
+var savedCart = null;
+try{
+  savedCart = window.localStorage ? localStorage.getItem('queenaPendingCart') : null;
+}catch(e){
+  savedCart = null;
+}
 
 if(savedCart){
   try{
@@ -5021,8 +5026,12 @@ if(savedCart){
   }
 }
 
-// 購物清單先恢復，再做 LINE 快速認證
-tryQuickLineAuth_();
+// Safari 若封鎖儲存空間，不可讓 LINE 快速認證中止整支商品程式。
+try{
+  tryQuickLineAuth_();
+}catch(e){
+  try{ lineQuickAuthChecking = false; lineQuickAuthDone = true; }catch(_){}
+}
 
 
 // ==============================
@@ -7335,16 +7344,6 @@ document.addEventListener('DOMContentLoaded',function(){
       renderMobileApp();
     }
   });
-
-  // Safari 修正：商品 API 可能比手機版函式更早完成。
-  // DOM 全部完成後一定再畫一次，避免 products 已有資料但畫面仍停在「商品載入中」。
-  if(
-    isMobileQueena() &&
-    !document.documentElement.classList.contains('shared-product-mode') &&
-    !document.documentElement.classList.contains('shared-product-initial')
-  ){
-    try{ renderMobileApp(); }catch(e){}
-  }
 
 });
 </script>
