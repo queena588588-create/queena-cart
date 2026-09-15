@@ -4780,33 +4780,70 @@ const sendBtn = document.getElementById('sendBtn');
 // ==============================
 
 async function apiGet(action, params){
-  const q = new URLSearchParams();
-  q.set('action', action);
+  const maxAttempts = action === 'products' ? 4 : 2;
+  let lastError = null;
 
-  Object.entries(params || {}).forEach(function(entry){
-    const key = entry[0];
-    const value = entry[1];
-    if(value !== undefined && value !== null){
-      q.set(key, String(value));
+  for(let attempt = 1; attempt <= maxAttempts; attempt++){
+    try{
+      const q = new URLSearchParams();
+      q.set('action', action);
+      q.set('_cb', Date.now() + '-' + attempt);
+
+      Object.entries(params || {}).forEach(function(entry){
+        const key = entry[0];
+        const value = entry[1];
+        if(value !== undefined && value !== null){
+          q.set(key, String(value));
+        }
+      });
+
+      const res = await fetch('/api?' + q.toString(), {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+
+      const text = await res.text();
+      const trimmed = String(text || '').trim();
+
+      // /api 偶發被回成網站 HTML 時，不直接讓整頁商品失敗，改為自動重試。
+      if(!trimmed || trimmed.charAt(0) === '<'){
+        throw new Error('API 暫時回傳網頁內容');
+      }
+
+      let data;
+      try{
+        data = JSON.parse(trimmed);
+      }catch(parseErr){
+        throw new Error('API 暫時回傳非 JSON 資料');
+      }
+
+      if(!res.ok || !data || data.success === false){
+        throw new Error(
+          data && data.message
+            ? data.message
+            : 'API 連線失敗'
+        );
+      }
+
+      // 商品明明存在但偶發拿到空陣列時，也自動再抓一次。
+      if(action === 'products' && (!Array.isArray(data.products) || data.products.length === 0)){
+        throw new Error('商品資料暫時為空');
+      }
+
+      return data;
+
+    }catch(err){
+      lastError = err;
+      if(attempt < maxAttempts){
+        await new Promise(function(resolve){
+          setTimeout(resolve, attempt === 1 ? 450 : (attempt === 2 ? 900 : 1600));
+        });
+      }
     }
-  });
-
-  const res = await fetch('/api?' + q.toString(), {
-    method: 'GET',
-    cache: 'no-store'
-  });
-
-  const data = await res.json();
-
-  if(!res.ok || !data || data.success === false){
-    throw new Error(
-      data && data.message
-        ? data.message
-        : 'API 連線失敗'
-    );
   }
 
-  return data;
+  throw lastError || new Error('API 連線失敗');
 }
 
 async function apiPost(action, payload){
