@@ -1,7 +1,7 @@
 const GAS_URL =
   'https://script.google.com/macros/s/AKfycbz3cGUC6hsUJfhKJJ-kCznEaYtwiBKcTPpBO-EK40ZB7q0cp4sHjhUye-zN4p1bcQ8s/exec';
 
-const PRODUCT_CACHE_SECONDS = 60;
+const PRODUCT_CACHE_SECONDS = 300;
 
 function jsonResponse(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -122,8 +122,7 @@ async function getCachedProducts(request, env) {
     status: 200,
     headers: {
       'content-type': 'application/json; charset=UTF-8',
-      'cache-control':
-        'public, max-age=0, s-maxage=' + PRODUCT_CACHE_SECONDS
+     'cache-control': 'public, max-age=300'
     }
   });
 
