@@ -4630,6 +4630,8 @@ html.shared-product-initial #queenaHomeEntry{
       LINE 確認訂單
     </button>
 
+    <div id="lineFriendPrompt" class="lineFriendPrompt" style="display:none;"></div>
+
     <button id="clearBtn" class="actionBtn clearBtn">
       🗑️ 清空清單
     </button>
@@ -5866,7 +5868,7 @@ function createMessage(){
       '<div class="orderConfirmList">' + rows + '</div>' +
       moneyHtml +
       promoHtml +
-      '<div class="orderConfirmAfter">訂單送出後，可加 Queena 好友享優惠價付款</div>' +
+      '<div class="orderConfirmAfter">確認商品內容無誤後即可送出 ♡</div>' +
     '</div>'
   );
 }
@@ -5881,6 +5883,8 @@ document
   .addEventListener('click', function(){
 
     renderCartPanel();
+
+    showLineContactPrompt_();
 
     overlay.style.display = 'flex';
 
@@ -6059,6 +6063,9 @@ function startFullLineLogin_(items){
 
 function showLineContactPrompt_(){
 
+  const box = document.getElementById('lineFriendPrompt');
+  if(!box) return;
+
   apiGet('lineAddFriend')
     .then(function(data){
 
@@ -6067,50 +6074,23 @@ function showLineContactPrompt_(){
           ? String(data.url)
           : '';
 
-      if(!addUrl) return;
-
-      let box =
-        document.getElementById('lineFriendPrompt');
-
-      if(!box){
-        box = document.createElement('div');
-        box.id = 'lineFriendPrompt';
-        box.className = 'lineFriendPrompt';
+      if(!addUrl){
+        box.style.display = 'none';
+        return;
       }
 
       box.innerHTML =
-        '<div class="lineFriendPromptTitle">訂單已送出 ♡</div>' +
-        '<div class="lineFriendPromptText">接下來直接和 Queena 確認優惠與付款方式</div>' +
         '<a class="lineFriendAddBtn" href="' +
           escapeHtml(addUrl) +
         '" target="_blank" rel="noopener">' +
           '💗 加 Queena 好友｜享優惠價付款' +
         '</a>';
 
-      const modal =
-        document.querySelector(
-          '.cartModal, .modalContent, .cartPanel, #cartPanel'
-        );
-
-      if(modal){
-
-        const old =
-          modal.querySelector('#lineFriendPrompt');
-
-        if(old && old !== box){
-          old.remove();
-        }
-
-        modal.appendChild(box);
-
-      }else{
-
-        document.body.appendChild(box);
-      }
+      box.style.display = 'block';
 
     })
     .catch(function(){
-      // 加好友按鈕失敗不影響清單送出
+      box.style.display = 'none';
     });
 }
 
@@ -6174,8 +6154,6 @@ function submitWishlist(items){
         'LINE 確認訂單';
 
       alert('✓ 訂單已送出給 Queena ♡');
-
-      showLineContactPrompt_();
 
       cart = {};
 
