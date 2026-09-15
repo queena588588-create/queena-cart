@@ -1,7 +1,10 @@
 const GAS_URL =
   'https://script.google.com/macros/s/AKfycbz3cGUC6hsUJfhKJJ-kCznEaYtwiBKcTPpBO-EK40ZB7q0cp4sHjhUye-zN4p1bcQ8s/exec';
 
-const PRODUCT_CACHE_SECONDS = 300;
+// 商品：快取本體保留 7 天；超過 5 分鐘就在背景更新。
+// 客人永遠優先拿到快取，不需要等 Google 試算表。
+const PRODUCT_REFRESH_MS = 5 * 60 * 1000;
+const PRODUCT_KEEP_SECONDS = 7 * 24 * 60 * 60;
 
 function jsonResponse(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -21,7 +24,6 @@ function looksLikeJson(text) {
 
 async function readGasJson(url, options, attempt = 1) {
   const requestUrl = new URL(url);
-
   requestUrl.searchParams.set(
     '_cf_try',
     String(Date.now()) + '_' + attempt
@@ -32,7 +34,6 @@ async function readGasJson(url, options, attempt = 1) {
     redirect: 'manual'
   });
 
-  // GAS 常會先 302 到 googleusercontent
   if (res.status >= 300 && res.status < 400) {
     const location = res.headers.get('location');
 
@@ -56,214 +57,405 @@ async function readGasJson(url, options, attempt = 1) {
 
       return {
         ok: true,
-        text: text,
+        text,
         status: 200
       };
     } catch (_) {}
   }
 
-  if (attempt < 4) {
-    await new Promise(function(resolve) {
-      setTimeout(resolve, 250 * attempt);
-    });
+  if (attempt < 3) {
+    await new Promise(resolve =>
+      setTimeout(resolve, 350 * attempt)
+    );
 
-    return readGasJson(url, options, attempt + 1);
+    return readGasJson(
+      url,
+      options,
+      attempt + 1
+    );
   }
 
   return {
     ok: false,
     status: res.status || 502,
-    text: text,
-    message: '商品資料暫時讀取不到，請重新整理後再試'
+    text,
+    message: '商品資料暫時讀取不到，請稍後再試'
   };
 }
 
-async function getCachedProducts(request, env) {
-  const cache = caches.default;
+function productCacheKey(request) {
+  const u = new URL(request.url);
 
-  // 固定 cache key，不讓前端的 _cb 造成每次都重新打 GAS
-  const cacheKey =
-    new Request(
-      new URL('/__queena_products_cache__', request.url).toString(),
-      { method: 'GET' }
+  u.pathname =
+    '/__queena_products_cache_v2__';
+
+  u.search = '';
+
+  return new Request(
+    u.toString(),
+    { method: 'GET' }
+  );
+}
+
+async function fetchFreshProducts() {
+  const target = new URL(GAS_URL);
+
+  target.searchParams.set(
+    'api',
+    'products'
+  );
+
+  const result = await readGasJson(
+    target.toString(),
+    {
+      method: 'GET',
+      headers: {
+        'accept':
+          'application/json,text/plain,*/*',
+        'cache-control':
+          'no-cache'
+      }
+    }
+  );
+
+  if (!result.ok) {
+    throw new Error(
+      result.message ||
+      '商品資料讀取失敗'
     );
+  }
 
-  const cached = await cache.match(cacheKey);
+  const parsed =
+    JSON.parse(result.text);
+
+  if (
+    !parsed ||
+    parsed.success === false ||
+    !Array.isArray(parsed.products) ||
+    parsed.products.length === 0
+  ) {
+    throw new Error(
+      '商品資料為空'
+    );
+  }
+
+  return new Response(
+    result.text,
+    {
+      status: 200,
+      headers: {
+        'content-type':
+          'application/json; charset=UTF-8',
+
+        'cache-control':
+          'public, max-age=' +
+          PRODUCT_KEEP_SECONDS,
+
+        'x-queena-cached-at':
+          String(Date.now())
+      }
+    }
+  );
+}
+
+async function refreshProductCache(
+  cache,
+  key
+) {
+  const fresh =
+    await fetchFreshProducts();
+
+  await cache.put(
+    key,
+    fresh.clone()
+  );
+
+  return fresh;
+}
+
+async function getProductsFast(
+  request,
+  ctx
+) {
+  const cache =
+    caches.default;
+
+  const key =
+    productCacheKey(request);
+
+  const cached =
+    await cache.match(key);
 
   if (cached) {
+    const cachedAt =
+      Number(
+        cached.headers.get(
+          'x-queena-cached-at'
+        ) || 0
+      );
+
+    const age =
+      cachedAt
+        ? Date.now() - cachedAt
+        : PRODUCT_REFRESH_MS + 1;
+
+    // 有舊商品資料：
+    // 直接先給客人，不讓客人等 Google。
+    // 超過 5 分鐘才在背景更新。
+    if (
+      age >
+      PRODUCT_REFRESH_MS
+    ) {
+      ctx.waitUntil(
+        refreshProductCache(
+          cache,
+          key
+        ).catch(err =>
+          console.log(
+            'Queena background product refresh failed:',
+            err &&
+            err.message
+              ? err.message
+              : err
+          )
+        )
+      );
+    }
+
     return cached;
   }
 
-  const target = new URL(GAS_URL);
-  target.searchParams.set('api', 'products');
+  // 只有第一次還沒有快取時，
+  // 才需要等 Google 建立一次商品快取。
+  try {
+    return await refreshProductCache(
+      cache,
+      key
+    );
 
-  const result = await readGasJson(
-    target.toString(),
-    {
-      method: 'GET',
-      headers: {
-        'accept': 'application/json,text/plain,*/*',
-        'cache-control': 'no-cache'
-      }
-    }
-  );
-
-  if (!result.ok) {
+  } catch (err) {
     return jsonResponse(
       {
         success: false,
-        message: result.message
+        message:
+          err &&
+          err.message
+            ? err.message
+            : '商品資料暫時讀取不到'
       },
       502
     );
   }
-
-  const response = new Response(result.text, {
-    status: 200,
-    headers: {
-      'content-type': 'application/json; charset=UTF-8',
-     'cache-control': 'public, max-age=300'
-    }
-  });
-
-  // 不阻塞客人畫面
-  if (env && env.ctx && typeof env.ctx.waitUntil === 'function') {
-    env.ctx.waitUntil(cache.put(cacheKey, response.clone()));
-  } else {
-    try {
-      await cache.put(cacheKey, response.clone());
-    } catch (_) {}
-  }
-
-  return response;
 }
 
-async function proxyGet(request, env) {
-  const url = new URL(request.url);
-  const action = url.searchParams.get('action') || '';
+async function proxyGet(
+  request,
+  ctx
+) {
+  const url =
+    new URL(request.url);
 
-  // 商品資料使用 Cloudflare 60 秒暫存
+  const action =
+    url.searchParams.get(
+      'action'
+    ) || '';
+
   if (action === 'products') {
-    return getCachedProducts(request, env);
+    return getProductsFast(
+      request,
+      ctx
+    );
   }
 
-  const target = new URL(GAS_URL);
-  target.searchParams.set('api', action);
+  const target =
+    new URL(GAS_URL);
 
-  for (const [key, value] of url.searchParams.entries()) {
-    if (key !== 'action' && key !== '_cb') {
-      target.searchParams.set(key, value);
-    }
-  }
-
-  const result = await readGasJson(
-    target.toString(),
-    {
-      method: 'GET',
-      headers: {
-        'accept': 'application/json,text/plain,*/*',
-        'cache-control': 'no-cache'
-      }
-    }
+  target.searchParams.set(
+    'api',
+    action
   );
+
+  for (
+    const [key, value]
+    of url.searchParams.entries()
+  ) {
+    if (
+      key !== 'action' &&
+      key !== '_cb'
+    ) {
+      target.searchParams.set(
+        key,
+        value
+      );
+    }
+  }
+
+  const result =
+    await readGasJson(
+      target.toString(),
+      {
+        method: 'GET',
+        headers: {
+          'accept':
+            'application/json,text/plain,*/*',
+          'cache-control':
+            'no-cache'
+        }
+      }
+    );
 
   if (!result.ok) {
     return jsonResponse(
       {
         success: false,
-        message: result.message
+        message:
+          result.message
       },
       502
     );
   }
 
-  return new Response(result.text, {
-    status: 200,
-    headers: {
-      'content-type': 'application/json; charset=UTF-8',
-      'cache-control': 'no-store, no-cache, must-revalidate'
+  return new Response(
+    result.text,
+    {
+      status: 200,
+      headers: {
+        'content-type':
+          'application/json; charset=UTF-8',
+
+        'cache-control':
+          'no-store, no-cache, must-revalidate'
+      }
     }
-  });
+  );
 }
 
 async function proxyPost(request) {
-  const incoming = await request.json();
+  const incoming =
+    await request.json();
 
   const action =
-    incoming && incoming.action
+    incoming &&
+    incoming.action
       ? String(incoming.action)
       : '';
 
   const payload =
-    incoming && incoming.payload
+    incoming &&
+    incoming.payload
       ? incoming.payload
       : {};
 
-  const body = new URLSearchParams();
+  const body =
+    new URLSearchParams();
 
-  body.set('type', action);
+  body.set(
+    'type',
+    action
+  );
 
   if (action === 'wishlist') {
     body.set(
       'rememberToken',
-      String(payload.rememberToken || '')
+      String(
+        payload.rememberToken ||
+        ''
+      )
     );
 
     body.set(
       'itemsJson',
       JSON.stringify(
-        Array.isArray(payload.items)
+        Array.isArray(
+          payload.items
+        )
           ? payload.items
           : []
       )
     );
-  } else {
-    Object.entries(payload || {}).forEach(function(entry) {
-      const key = entry[0];
-      const value = entry[1];
 
-      body.set(
-        key,
-        typeof value === 'string'
-          ? value
-          : JSON.stringify(value)
-      );
-    });
+  } else {
+    Object.entries(
+      payload || {}
+    ).forEach(
+      ([key, value]) => {
+
+        body.set(
+          key,
+          typeof value ===
+          'string'
+            ? value
+            : JSON.stringify(
+                value
+              )
+        );
+
+      }
+    );
   }
 
-  // POST 絕對不自動重送，避免重複訂單
-  let res = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: {
-      'content-type':
-        'application/x-www-form-urlencoded;charset=UTF-8',
-      'accept': 'application/json,text/plain,*/*'
-    },
-    body: body.toString(),
-    redirect: 'manual'
-  });
+  let res =
+    await fetch(
+      GAS_URL,
+      {
+        method: 'POST',
 
-  if (res.status >= 300 && res.status < 400) {
-    const location = res.headers.get('location');
+        headers: {
+          'content-type':
+            'application/x-www-form-urlencoded;charset=UTF-8',
+
+          'accept':
+            'application/json,text/plain,*/*'
+        },
+
+        body:
+          body.toString(),
+
+        redirect:
+          'manual'
+      }
+    );
+
+  if (
+    res.status >= 300 &&
+    res.status < 400
+  ) {
+    const location =
+      res.headers.get(
+        'location'
+      );
 
     if (location) {
-      res = await fetch(location, {
-        method: 'GET',
-        redirect: 'follow',
-        headers: {
-          'accept': 'application/json,text/plain,*/*',
-          'cache-control': 'no-cache'
-        }
-      });
+      res =
+        await fetch(
+          location,
+          {
+            method: 'GET',
+            redirect: 'follow',
+
+            headers: {
+              'accept':
+                'application/json,text/plain,*/*',
+
+              'cache-control':
+                'no-cache'
+            }
+          }
+        );
     }
   }
 
-  const text = await res.text();
+  const text =
+    await res.text();
 
-  if (!res.ok || !looksLikeJson(text)) {
+  if (
+    !res.ok ||
+    !looksLikeJson(text)
+  ) {
     return jsonResponse(
       {
         success: false,
+
         message:
           '訂單送出結果暫時異常，請先不要重複送出，稍後確認訂單紀錄'
       },
@@ -284,72 +476,124 @@ async function proxyPost(request) {
     );
   }
 
-  return new Response(text, {
-    status: 200,
-    headers: {
-      'content-type': 'application/json; charset=UTF-8',
-      'cache-control': 'no-store, no-cache, must-revalidate'
+  return new Response(
+    text,
+    {
+      status: 200,
+      headers: {
+        'content-type':
+          'application/json; charset=UTF-8',
+
+        'cache-control':
+          'no-store, no-cache, must-revalidate'
+      }
     }
-  });
+  );
 }
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(
+    request,
+    env,
+    ctx
+  ) {
     try {
-      const url = new URL(request.url);
+      const url =
+        new URL(request.url);
 
-      if (url.pathname === '/api') {
-        if (request.method === 'GET') {
-          // 把 ctx 傳進商品 cache
-          const workerEnv = Object.assign({}, env || {});
-          workerEnv.ctx = ctx;
+      // =========================
+      // API
+      // =========================
+      if (
+        url.pathname === '/api'
+      ) {
 
-          return await proxyGet(request, workerEnv);
+        if (
+          request.method ===
+          'GET'
+        ) {
+          return await proxyGet(
+            request,
+            ctx
+          );
         }
 
-        if (request.method === 'POST') {
-          return await proxyPost(request);
+        if (
+          request.method ===
+          'POST'
+        ) {
+          return await proxyPost(
+            request
+          );
         }
 
         return jsonResponse(
           {
             success: false,
-            message: 'Method not allowed'
+            message:
+              'Method not allowed'
           },
           405
         );
       }
 
-      // 首頁 / index.html 不做 Cloudflare cache，
-      // 避免 iPhone Safari 一直吃到舊版 HTML
-      const assetResponse = await env.ASSETS.fetch(request);
+      // =========================
+      // 網站靜態檔案
+      // =========================
+      const assetResponse =
+        await env.ASSETS.fetch(
+          request
+        );
 
-      const headers = new Headers(assetResponse.headers);
+      const headers =
+        new Headers(
+          assetResponse.headers
+        );
 
+      // 首頁 HTML 不快取，
+      // 避免 Safari 一直拿舊 index。
       if (
         url.pathname === '/' ||
-        url.pathname === '/index.html'
+        url.pathname ===
+          '/index.html'
       ) {
         headers.set(
           'cache-control',
           'no-store, no-cache, must-revalidate, max-age=0'
         );
-        headers.set('pragma', 'no-cache');
-        headers.set('expires', '0');
+
+        headers.set(
+          'pragma',
+          'no-cache'
+        );
+
+        headers.set(
+          'expires',
+          '0'
+        );
       }
 
-      return new Response(assetResponse.body, {
-        status: assetResponse.status,
-        statusText: assetResponse.statusText,
-        headers: headers
-      });
+      return new Response(
+        assetResponse.body,
+        {
+          status:
+            assetResponse.status,
+
+          statusText:
+            assetResponse.statusText,
+
+          headers
+        }
+      );
 
     } catch (err) {
       return jsonResponse(
         {
           success: false,
+
           message:
-            err && err.message
+            err &&
+            err.message
               ? err.message
               : String(err)
         },
