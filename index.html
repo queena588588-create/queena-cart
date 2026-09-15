@@ -7353,6 +7353,34 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 </script>
 
+<!-- Safari：商品資料可能早於手機版 render 函式完成；在手機版程式定義完成後強制補畫 -->
+<script>
+(function(){
+  function forceQueenaMobileRender(){
+    try{
+      if(
+        typeof renderMobileApp === 'function' &&
+        typeof isMobileQueena === 'function' &&
+        isMobileQueena() &&
+        !document.documentElement.classList.contains('shared-product-mode') &&
+        !document.documentElement.classList.contains('shared-product-initial')
+      ){
+        renderMobileApp();
+      }
+    }catch(e){}
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', forceQueenaMobileRender);
+  }else{
+    forceQueenaMobileRender();
+  }
+  window.addEventListener('load', forceQueenaMobileRender);
+  setTimeout(forceQueenaMobileRender, 300);
+  setTimeout(forceQueenaMobileRender, 1200);
+  setTimeout(forceQueenaMobileRender, 3000);
+})();
+</script>
 
 <script>
 /* =========================================================
