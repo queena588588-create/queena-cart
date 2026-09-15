@@ -7052,6 +7052,13 @@ document.addEventListener('DOMContentLoaded',function(){
   setupMobileHero();
   setMobileUpdateDate();
 
+  // 手機版補一次完整渲染：
+  // 商品 API 有時會比手機版函式更早完成，造成第一次載入顯示 0 件。
+  // DOM 完成後再 render 一次，可同時涵蓋 Safari / IG 內建瀏覽器。
+  if(typeof renderMobileApp === 'function'){
+    renderMobileApp();
+  }
+
   const search =
     document.getElementById('mSearch');
 
