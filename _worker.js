@@ -400,25 +400,23 @@ async function serveShopPage(
         String(product.row)
       );
 
-    const desc =
-      'Queena SELECT｜這個我覺得很可以 🩷 分享給你看看 👀';
+   const desc =
+  'Queena SELECT｜Queena 私心推薦 ♡';
 
-    html =
-      html.replace(
-        /<title>[\s\S]*?<\/title>/i,
-        '<title>' +
-          escAttr(name) +
-          '｜Queena SELECT</title>'
-      );
+html =
+  html.replace(
+    /<title>[\s\S]*?<\/title>/i,
+    '<title>' +
+      escAttr(name) +
+      '</title>'
+  );
 
-    html =
-      replaceOrAddMeta(
-        html,
-        'og:title',
-        name +
-          '｜Queena SELECT'
-      );
-
+html =
+  replaceOrAddMeta(
+    html,
+    'og:title',
+    name
+  );
     html =
       replaceOrAddMeta(
         html,
