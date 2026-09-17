@@ -5054,10 +5054,24 @@ function tryQuickLineAuth_(done){
 // ==============================
 
 var savedCart = null;
+
 try{
-  savedCart = queenaLocalStorage ? queenaLocalStorage.getItem('queenaPendingCart') : null;
+  savedCart = queenaLocalStorage
+    ? queenaLocalStorage.getItem('queenaPendingCart')
+    : null;
 }catch(e){
   savedCart = null;
+}
+
+// Safari 從 LINE App 回來後，如果 localStorage 沒拿到，改讀備份
+if(!savedCart){
+  try{
+    savedCart = queenaSessionStorage
+      ? queenaSessionStorage.getItem('queenaPendingCartBackup')
+      : null;
+  }catch(e){
+    savedCart = null;
+  }
 }
 
 if(savedCart){
@@ -5067,6 +5081,19 @@ if(savedCart){
     cart = {};
   }
 }
+
+// 同步恢復「LINE 回來後要自動送單」狀態
+try{
+  if(
+    queenaLocalStorage.getItem('queenaPendingSend') !== '1' &&
+    queenaSessionStorage.getItem('queenaPendingSendBackup') === '1'
+  ){
+    queenaLocalStorage.setItem(
+      'queenaPendingSend',
+      '1'
+    );
+  }
+}catch(e){}
 
 // Safari 若封鎖儲存空間，不可讓 LINE 快速認證中止整支商品程式。
 try{
@@ -6097,15 +6124,35 @@ sendBtn.addEventListener('click', function(){
 
 function startFullLineLogin_(items){
 
-  queenaLocalStorage.setItem(
-    'queenaPendingCart',
-    JSON.stringify(cart)
-  );
+  try{
+    var pendingCartText = JSON.stringify(cart || {});
 
-  queenaLocalStorage.setItem(
-    'queenaPendingSend',
-    '1'
-  );
+    queenaLocalStorage.setItem(
+      'queenaPendingCart',
+      pendingCartText
+    );
+
+    queenaLocalStorage.setItem(
+      'queenaPendingSend',
+      '1'
+    );
+
+    // Safari 跨到 LINE App 再回來時，多存一份 sessionStorage 備援
+    try{
+      queenaSessionStorage.setItem(
+        'queenaPendingCartBackup',
+        pendingCartText
+      );
+
+      queenaSessionStorage.setItem(
+        'queenaPendingSendBackup',
+        '1'
+      );
+    }catch(e){}
+
+  }catch(e){
+    console.warn('訂單暫存失敗：', e);
+  }
 
   sendBtn.disabled = true;
   sendBtn.textContent =
@@ -6247,6 +6294,16 @@ function submitWishlist(items){
       queenaLocalStorage.removeItem(
         'queenaPendingSend'
       );
+
+      try{
+        queenaSessionStorage.removeItem(
+          'queenaPendingCartBackup'
+        );
+
+        queenaSessionStorage.removeItem(
+          'queenaPendingSendBackup'
+        );
+      }catch(e){}
 
       queenaLocalStorage.removeItem(
         QUEENA_COUPON_KEY
@@ -6515,7 +6572,7 @@ const MOBILE_CATEGORY_ORDER = [
 ];
 
 function isMobileQueena(){
-return window.matchMedia('(max-width:1024px)').matches;
+  return window.matchMedia('(max-width:1024px)').matches;
 }
 
 function mobileEscape(text){
@@ -7416,7 +7473,7 @@ async function shareQueenaProduct(productName){
 
   // 手機版：使用原生分享，會帶上分享文字＋商品網址
   const isMobileShare =
-  window.matchMedia('(max-width: 1024px)').matches;
+    window.matchMedia('(max-width: 1024px)').matches;
 
   if(isMobileShare && navigator.share){
     try{
@@ -8097,19 +8154,15 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
         if(typeof buildCategories === 'function'){
           try{ buildCategories(); }catch(e){}
         }
-
         if(typeof renderFeatured === 'function'){
           try{ renderFeatured(); }catch(e){}
         }
-
         if(typeof render === 'function'){
           try{ render(); }catch(e){}
         }
-
         if(typeof renderMobileApp === 'function'){
           try{ renderMobileApp(); }catch(e){}
         }
-
         if(typeof renderMobileAllProducts === 'function'){
           try{ renderMobileAllProducts(); }catch(e){}
         }
@@ -8117,132 +8170,82 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
 
       finished = true;
       return true;
-
     }catch(e){
       console.error('Queena 商品套用失敗：', e);
       return false;
     }
   }
 
-  /* 第一層：Worker 已塞進 HTML 的商品資料 */
   function loadSeed(){
     var seed = document.getElementById('queenaProductSeed');
-
     if(!seed) return false;
 
     try{
       var text = seed.textContent || seed.innerText || '';
       if(!text.trim()) return false;
-
       return applyData(JSON.parse(text));
-
     }catch(e){
       console.warn('Queena seed 讀取失敗：', e);
       return false;
     }
   }
 
-  /* 第二層：直接 fetch Cloudflare /api */
   function loadFetch(){
     if(typeof fetch !== 'function'){
       return Promise.reject(new Error('fetch unavailable'));
     }
 
-    return fetch(
-      '/api?action=products&_cb=' + Date.now(),
-      {
-        method:'GET',
-        cache:'no-store',
-        headers:{
-          'Accept':'application/json'
-        }
-      }
-    )
+    return fetch('/api?action=products&_cb=' + Date.now(), {
+      method:'GET',
+      cache:'no-store',
+      headers:{ 'Accept':'application/json' }
+    })
     .then(function(res){
-      if(!res.ok){
-        throw new Error('HTTP ' + res.status);
-      }
-
+      if(!res.ok) throw new Error('HTTP ' + res.status);
       return res.text();
     })
     .then(function(text){
       var clean = String(text || '').trim();
-
       if(!clean || clean.charAt(0) === '<'){
         throw new Error('API 回傳非 JSON');
       }
-
       var data = JSON.parse(clean);
-
-      if(!applyData(data)){
-        throw new Error('商品資料無法套用');
-      }
-
+      if(!applyData(data)) throw new Error('商品資料無法套用');
       return true;
     });
   }
 
-  /* 第三層：XHR 備援 */
   function loadXHR(){
     if(finished) return;
-
     attempts += 1;
 
     var xhr = new XMLHttpRequest();
-
-    xhr.open(
-      'GET',
-      '/api?action=products&_cb=' + Date.now() + '-' + attempts,
-      true
-    );
-
+    xhr.open('GET','/api?action=products&_cb=' + Date.now() + '-' + attempts,true);
     xhr.timeout = 12000;
 
-    try{
-      xhr.setRequestHeader('Accept','application/json');
-    }catch(e){}
+    try{ xhr.setRequestHeader('Accept','application/json'); }catch(e){}
 
     xhr.onload = function(){
-
       if(xhr.status >= 200 && xhr.status < 300){
-
         try{
           var text = String(xhr.responseText || '').trim();
-
-          if(
-            text &&
-            text.charAt(0) !== '<' &&
-            applyData(JSON.parse(text))
-          ){
+          if(text && text.charAt(0) !== '<' && applyData(JSON.parse(text))){
             return;
           }
-
         }catch(e){
           console.warn('Queena XHR JSON 失敗：', e);
         }
       }
-
       retryXHR();
     };
 
-    xhr.onerror =
-    xhr.ontimeout =
-    xhr.onabort = function(){
-      retryXHR();
-    };
+    xhr.onerror = xhr.ontimeout = xhr.onabort = function(){ retryXHR(); };
 
-    try{
-      xhr.send();
-
-    }catch(e){
-      retryXHR();
-    }
+    try{ xhr.send(); }catch(e){ retryXHR(); }
   }
 
   function retryXHR(){
-
     if(finished) return;
-
     if(attempts < 2){
       setTimeout(loadXHR,700);
     }else{
@@ -8251,19 +8254,12 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   }
 
   function startFallback(){
-
-    loadFetch()
-      .catch(function(err){
-
-        console.warn('Queena fetch 備援失敗：', err);
-
-        if(!finished){
-          loadXHR();
-        }
-      });
+    loadFetch().catch(function(err){
+      console.warn('Queena fetch 備援失敗：', err);
+      if(!finished) loadXHR();
+    });
   }
 
-  /* Safari 優先吃 Worker seed */
   if(!loadSeed()){
     startFallback();
   }
