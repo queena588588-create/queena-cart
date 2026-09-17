@@ -7304,9 +7304,9 @@ function getProductShareUrl(productName){
     }) || null;
   }catch(e){}
 
-  if(matchedProduct && matchedProduct.row !== undefined && matchedProduct.row !== null && String(matchedProduct.row).trim()){
-    return window.location.origin + '/p/' + encodeURIComponent(String(matchedProduct.row).trim());
-  }
+ if(matchedProduct && matchedProduct.row !== undefined && matchedProduct.row !== null && String(matchedProduct.row).trim()){
+  return window.location.origin + '/p/' + encodeURIComponent(String(matchedProduct.row).trim()) + '?v=2';
+}
 
   // 舊資料沒有 row 時才退回舊格式，避免分享功能失效。
   return window.location.origin + '/?product=' + encodeURIComponent(targetName);
