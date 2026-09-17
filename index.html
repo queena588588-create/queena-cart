@@ -8051,10 +8051,12 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
 
   function showError(){
     if(finished) return;
+
     var desktopLoading = document.getElementById('loading');
     if(desktopLoading){
       desktopLoading.innerHTML = '商品讀取失敗，請重新載入 ♡';
     }
+
     var mobileGrid = document.getElementById('mAllGrid');
     if(mobileGrid){
       mobileGrid.innerHTML =
@@ -8062,14 +8064,27 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
         '商品讀取失敗 ♡<br><br>' +
         '<button type="button" id="queenaReloadProducts" style="border:1px solid #ead9d5;background:#fff;border-radius:999px;padding:10px 18px;color:#7f6a63;">重新載入商品</button>' +
         '</div>';
+
       var retry = document.getElementById('queenaReloadProducts');
-      if(retry){ retry.onclick = function(){ finished=false; attempts=0; loadFallback(); }; }
+      if(retry){
+        retry.onclick = function(){
+          finished = false;
+          attempts = 0;
+          startFallback();
+        };
+      }
     }
   }
 
   function applyData(data){
     if(finished) return true;
-    if(!data || data.success === false || !Array.isArray(data.products) || !data.products.length){
+
+    if(
+      !data ||
+      data.success === false ||
+      !Array.isArray(data.products) ||
+      !data.products.length
+    ){
       return false;
     }
 
@@ -8078,51 +8093,181 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
         applyQueenaProducts(data);
       }else{
         products = data.products;
-        if(typeof renderMobileApp === 'function') renderMobileApp();
-        if(typeof render === 'function') render();
+
+        if(typeof buildCategories === 'function'){
+          try{ buildCategories(); }catch(e){}
+        }
+
+        if(typeof renderFeatured === 'function'){
+          try{ renderFeatured(); }catch(e){}
+        }
+
+        if(typeof render === 'function'){
+          try{ render(); }catch(e){}
+        }
+
+        if(typeof renderMobileApp === 'function'){
+          try{ renderMobileApp(); }catch(e){}
+        }
+
+        if(typeof renderMobileAllProducts === 'function'){
+          try{ renderMobileAllProducts(); }catch(e){}
+        }
       }
+
       finished = true;
       return true;
+
     }catch(e){
+      console.error('Queena 商品套用失敗：', e);
       return false;
     }
   }
 
+  /* 第一層：Worker 已塞進 HTML 的商品資料 */
   function loadSeed(){
     var seed = document.getElementById('queenaProductSeed');
+
     if(!seed) return false;
+
     try{
-      return applyData(JSON.parse(seed.textContent || seed.innerText || ''));
+      var text = seed.textContent || seed.innerText || '';
+      if(!text.trim()) return false;
+
+      return applyData(JSON.parse(text));
+
     }catch(e){
+      console.warn('Queena seed 讀取失敗：', e);
       return false;
     }
   }
 
-  function loadFallback(){
+  /* 第二層：直接 fetch Cloudflare /api */
+  function loadFetch(){
+    if(typeof fetch !== 'function'){
+      return Promise.reject(new Error('fetch unavailable'));
+    }
+
+    return fetch(
+      '/api?action=products&_cb=' + Date.now(),
+      {
+        method:'GET',
+        cache:'no-store',
+        headers:{
+          'Accept':'application/json'
+        }
+      }
+    )
+    .then(function(res){
+      if(!res.ok){
+        throw new Error('HTTP ' + res.status);
+      }
+
+      return res.text();
+    })
+    .then(function(text){
+      var clean = String(text || '').trim();
+
+      if(!clean || clean.charAt(0) === '<'){
+        throw new Error('API 回傳非 JSON');
+      }
+
+      var data = JSON.parse(clean);
+
+      if(!applyData(data)){
+        throw new Error('商品資料無法套用');
+      }
+
+      return true;
+    });
+  }
+
+  /* 第三層：XHR 備援 */
+  function loadXHR(){
+    if(finished) return;
+
     attempts += 1;
+
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/api?action=products&_cb=' + Date.now(), true);
+
+    xhr.open(
+      'GET',
+      '/api?action=products&_cb=' + Date.now() + '-' + attempts,
+      true
+    );
+
     xhr.timeout = 12000;
-    try{ xhr.setRequestHeader('Accept','application/json'); }catch(e){}
+
+    try{
+      xhr.setRequestHeader('Accept','application/json');
+    }catch(e){}
 
     xhr.onload = function(){
+
       if(xhr.status >= 200 && xhr.status < 300){
+
         try{
-          if(applyData(JSON.parse(String(xhr.responseText || '').trim()))) return;
-        }catch(e){}
+          var text = String(xhr.responseText || '').trim();
+
+          if(
+            text &&
+            text.charAt(0) !== '<' &&
+            applyData(JSON.parse(text))
+          ){
+            return;
+          }
+
+        }catch(e){
+          console.warn('Queena XHR JSON 失敗：', e);
+        }
       }
-      if(attempts < 2){ setTimeout(loadFallback, 700); } else { showError(); }
+
+      retryXHR();
     };
-    xhr.onerror = xhr.ontimeout = xhr.onabort = function(){
-      if(attempts < 2){ setTimeout(loadFallback, 700); } else { showError(); }
+
+    xhr.onerror =
+    xhr.ontimeout =
+    xhr.onabort = function(){
+      retryXHR();
     };
-    try{ xhr.send(); }catch(e){
-      if(attempts < 2){ setTimeout(loadFallback, 700); } else { showError(); }
+
+    try{
+      xhr.send();
+
+    }catch(e){
+      retryXHR();
     }
   }
 
-  // Worker seed 是 Safari 的主路徑：HTML 打開時商品已經在頁面裡。
-  if(!loadSeed()) loadFallback();
+  function retryXHR(){
+
+    if(finished) return;
+
+    if(attempts < 2){
+      setTimeout(loadXHR,700);
+    }else{
+      showError();
+    }
+  }
+
+  function startFallback(){
+
+    loadFetch()
+      .catch(function(err){
+
+        console.warn('Queena fetch 備援失敗：', err);
+
+        if(!finished){
+          loadXHR();
+        }
+      });
+  }
+
+  /* Safari 優先吃 Worker seed */
+  if(!loadSeed()){
+    startFallback();
+  }
+
 })();
 </script>
 
