@@ -869,17 +869,21 @@ export default {
         }
 
         /*
-          /index.html 直接交給
-          Pages 靜態檔案處理。
-        */
-        if (
-          url.pathname ===
-          '/index.html'
-        ) {
-          return env.ASSETS.fetch(
-            request
-          );
-        }
+         /*
+  Safari 修正：
+  /index.html 與 / 使用完全相同的商城首頁流程
+*/
+if (
+  url.pathname ===
+  '/index.html'
+) {
+  return serveShopPage(
+    request,
+    env,
+    ctx,
+    null
+  );
+}
       }
 
       return env.ASSETS.fetch(
