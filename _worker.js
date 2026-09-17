@@ -297,9 +297,11 @@ function injectSeed(
     return html;
   }
 
+  // Safari：商品資料必須先存在，
+  // 才能讓頁尾商品啟動程式立即讀到
   return html.replace(
-    '</body>',
-    seed + '</body>'
+    '</head>',
+    seed + '</head>'
   );
 }
 
