@@ -6,6 +6,28 @@
   <script defer charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+  /* Safari 安全儲存：私人瀏覽/受限制儲存空間也不阻斷商城 */
+  (function(){
+    function safeStorage(kind){
+      try{
+        var st = window[kind];
+        var test = '__queena_storage_test__';
+        st.setItem(test,'1'); st.removeItem(test);
+        return st;
+      }catch(e){
+        var mem = {};
+        return {
+          getItem:function(k){ return Object.prototype.hasOwnProperty.call(mem,k) ? mem[k] : null; },
+          setItem:function(k,v){ mem[k]=String(v); },
+          removeItem:function(k){ delete mem[k]; }
+        };
+      }
+    }
+    window.queenaLocalStorage = safeStorage('localStorage');
+    window.queenaSessionStorage = safeStorage('sessionStorage');
+  })();
+  </script>
   <title>Queena SELECT｜好物購物清單</title>
   <meta name="description" content="Queena SELECT 好物推薦｜生活用品、保養、美食與實用選物。">
   <!-- QUEENA_DYNAMIC_OG_START -->
@@ -4683,7 +4705,7 @@ const QUEENA_COUPON_ITEM_NAME =
   '🎟️ 網站限定購物券｜滿 $500 折 $30（符合資格時使用）';
 
 function hasQueenaCoupon(){
-  return localStorage.getItem(QUEENA_COUPON_KEY) === '1';
+  return queenaLocalStorage.getItem(QUEENA_COUPON_KEY) === '1';
 }
 
 function updateQueenaCouponDisplay(){
@@ -4710,8 +4732,8 @@ function setupQueenaCoupon(){
 
   if(claimBtn){
     claimBtn.addEventListener('click',function(){
-      localStorage.setItem(QUEENA_COUPON_KEY,'1');
-      sessionStorage.removeItem(QUEENA_COUPON_DISMISSED_KEY);
+      queenaLocalStorage.setItem(QUEENA_COUPON_KEY,'1');
+      queenaSessionStorage.removeItem(QUEENA_COUPON_DISMISSED_KEY);
       updateQueenaCouponDisplay();
       closeQueenaCouponWelcome();
       alert('🎟️ 領券成功！滿 $500 可折 $30 ♡');
@@ -4720,7 +4742,7 @@ function setupQueenaCoupon(){
 
   if(browseBtn){
     browseBtn.addEventListener('click',function(){
-      sessionStorage.setItem(QUEENA_COUPON_DISMISSED_KEY,'1');
+      queenaSessionStorage.setItem(QUEENA_COUPON_DISMISSED_KEY,'1');
       closeQueenaCouponWelcome();
     });
   }
@@ -4728,7 +4750,7 @@ function setupQueenaCoupon(){
   if(
     overlay &&
     !hasQueenaCoupon() &&
-    sessionStorage.getItem(QUEENA_COUPON_DISMISSED_KEY) !== '1'
+    queenaSessionStorage.getItem(QUEENA_COUPON_DISMISSED_KEY) !== '1'
   ){
     setTimeout(function(){
       overlay.classList.add('show');
@@ -4751,7 +4773,7 @@ const LIFF_ID = '2011084503-x54CcAEe';
 // LINE 第一次確認成功回來時，把安全憑證留在這台瀏覽器。
 // 之後同一瀏覽器可快速認證，不必再跳完整 LINE Login。
 if(lineRememberTokenFromServer){
-  localStorage.setItem(
+  queenaLocalStorage.setItem(
     'queenaLineRememberToken',
     lineRememberTokenFromServer
   );
@@ -4912,7 +4934,7 @@ async function apiPost(action, payload){
   const token = hash.get('line_token') || '';
 
   if(token){
-    localStorage.setItem(
+    queenaLocalStorage.setItem(
       'queenaLineRememberToken',
       token
     );
@@ -4942,7 +4964,7 @@ function tryAutoSubmitPending_(){
   if(!lineProfile || !lineProfile.userId) return;
 
   if(
-    localStorage.getItem('queenaPendingSend') !== '1'
+    queenaLocalStorage.getItem('queenaPendingSend') !== '1'
   ){
     return;
   }
@@ -4969,7 +4991,7 @@ function tryQuickLineAuth_(done){
   }
 
   const token =
-    localStorage.getItem(
+    queenaLocalStorage.getItem(
       'queenaLineRememberToken'
     );
 
@@ -5006,7 +5028,7 @@ function tryQuickLineAuth_(done){
         return;
       }
 
-      localStorage.removeItem(
+      queenaLocalStorage.removeItem(
         'queenaLineRememberToken'
       );
 
@@ -5033,7 +5055,7 @@ function tryQuickLineAuth_(done){
 
 var savedCart = null;
 try{
-  savedCart = window.localStorage ? localStorage.getItem('queenaPendingCart') : null;
+  savedCart = queenaLocalStorage ? queenaLocalStorage.getItem('queenaPendingCart') : null;
 }catch(e){
   savedCart = null;
 }
@@ -5975,8 +5997,8 @@ document
 
     cart = {};
 
-    localStorage.removeItem('queenaPendingCart');
-    localStorage.removeItem('queenaPendingSend');
+    queenaLocalStorage.removeItem('queenaPendingCart');
+    queenaLocalStorage.removeItem('queenaPendingSend');
 
     updateCart();
     render();
@@ -6032,7 +6054,7 @@ sendBtn.addEventListener('click', function(){
   if(!lineProfile){
 
     const rememberedToken =
-      localStorage.getItem(
+      queenaLocalStorage.getItem(
         'queenaLineRememberToken'
       );
 
@@ -6075,12 +6097,12 @@ sendBtn.addEventListener('click', function(){
 
 function startFullLineLogin_(items){
 
-  localStorage.setItem(
+  queenaLocalStorage.setItem(
     'queenaPendingCart',
     JSON.stringify(cart)
   );
 
-  localStorage.setItem(
+  queenaLocalStorage.setItem(
     'queenaPendingSend',
     '1'
   );
@@ -6168,7 +6190,7 @@ function submitWishlist(items){
   }
 
   const rememberToken =
-    localStorage.getItem(
+    queenaLocalStorage.getItem(
       'queenaLineRememberToken'
     ) || '';
 
@@ -6218,19 +6240,19 @@ function submitWishlist(items){
 
       cart = {};
 
-      localStorage.removeItem(
+      queenaLocalStorage.removeItem(
         'queenaPendingCart'
       );
 
-      localStorage.removeItem(
+      queenaLocalStorage.removeItem(
         'queenaPendingSend'
       );
 
-      localStorage.removeItem(
+      queenaLocalStorage.removeItem(
         QUEENA_COUPON_KEY
       );
 
-      sessionStorage.removeItem(
+      queenaSessionStorage.removeItem(
         QUEENA_COUPON_DISMISSED_KEY
       );
 
@@ -7304,9 +7326,32 @@ function getProductShareUrl(productName){
     }) || null;
   }catch(e){}
 
- if(matchedProduct && matchedProduct.row !== undefined && matchedProduct.row !== null && String(matchedProduct.row).trim()){
-  return window.location.origin + '/p/' + encodeURIComponent(String(matchedProduct.row).trim()) + '?v=2';
-}
+  if(matchedProduct && matchedProduct.row !== undefined && matchedProduct.row !== null && String(matchedProduct.row).trim()){
+    /*
+      LINE 縮圖自動版本：
+      版本由商品 row + 名稱 + 圖片 + 介紹 + 價格自動計算。
+      商品沒變網址就不變；商品資料/圖片有變才自動換版本。
+      不需要人工 v2、v3。
+    */
+    var signature = [
+      matchedProduct.row,
+      matchedProduct.name,
+      matchedProduct.photo || matchedProduct.image || '',
+      matchedProduct.intro || '',
+      matchedProduct.price || ''
+    ].join('|');
+
+    var hash = 2166136261;
+    for(var i=0;i<signature.length;i++){
+      hash ^= signature.charCodeAt(i);
+      hash = Math.imul(hash,16777619);
+    }
+    var version = (hash >>> 0).toString(36);
+
+    return window.location.origin +
+      '/p/' + encodeURIComponent(String(matchedProduct.row).trim()) +
+      '?v=' + encodeURIComponent(version);
+  }
 
   // 舊資料沒有 row 時才退回舊格式，避免分享功能失效。
   return window.location.origin + '/?product=' + encodeURIComponent(targetName);
@@ -7946,7 +7991,7 @@ function openSharedQueenaProduct(){
 
   // 先套用上次成功讀到的試算表內容，避免入口先閃舊字
   try{
-    var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    var cached = JSON.parse(queenaLocalStorage.getItem(CACHE_KEY) || 'null');
     if(Array.isArray(cached) && cached.length){
       syncHomepage(cached);
     }
@@ -7961,7 +8006,7 @@ function openSharedQueenaProduct(){
           syncHomepage(data.homepage);
 
           try{
-            localStorage.setItem(
+            queenaLocalStorage.setItem(
               CACHE_KEY,
               JSON.stringify(data.homepage)
             );
