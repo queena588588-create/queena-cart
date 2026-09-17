@@ -2349,7 +2349,7 @@ body{
 ====================================================== */
 .mobileSite{display:none;}
 
-@media(max-width:760px){
+@media(max-width:1024px){
 
   html,body{
     margin:0!important;
@@ -2851,7 +2851,7 @@ body{
   }
 }
 
-@media(min-width:761px){
+@media(min-width:1025px){
   .mobileSite{display:none!important;}
 }
 </style>
@@ -6515,7 +6515,7 @@ const MOBILE_CATEGORY_ORDER = [
 ];
 
 function isMobileQueena(){
-  return window.matchMedia('(max-width:760px)').matches;
+return window.matchMedia('(max-width:1024px)').matches;
 }
 
 function mobileEscape(text){
@@ -7416,7 +7416,7 @@ async function shareQueenaProduct(productName){
 
   // 手機版：使用原生分享，會帶上分享文字＋商品網址
   const isMobileShare =
-    window.matchMedia('(max-width: 760px)').matches;
+  window.matchMedia('(max-width: 1024px)').matches;
 
   if(isMobileShare && navigator.share){
     try{
