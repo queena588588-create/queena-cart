@@ -186,10 +186,7 @@ async function getProductsFast(request, ctx) {
   }
 }
 
-async function getProductsObject(
-  request,
-  ctx
-) {
+async function getProductsObject(request, ctx) {
   const response =
     await getProductsFast(
       request,
@@ -297,18 +294,11 @@ function injectSeed(
     return html;
   }
 
-  // Safari：商品資料必須先存在，
-  // 才能讓頁尾商品啟動程式立即讀到
   return html.replace(
-    '</head>',
-    seed + '</head>'
+    '</body>',
+    seed + '</body>'
   );
 }
-
-/* ==========================================
-   首頁 / 分享商品頁
-   Safari + LINE 新商品縮圖修正版
-========================================== */
 
 async function serveShopPage(
   request,
@@ -317,20 +307,17 @@ async function serveShopPage(
   productRow
 ) {
   const assetUrl = new URL(request.url);
+
   assetUrl.pathname = '/';
   assetUrl.search = '';
 
-  /*
-    Safari 修正：
-    讀 Pages 首頁資產時，不再把 Safari 原始
-    request headers 整包帶給 ASSETS。
-  */
-  const assetReq = new Request(
-    assetUrl.toString(),
-    {
-      method: 'GET'
-    }
-  );
+  const assetReq =
+    new Request(
+      assetUrl.toString(),
+      {
+        method: 'GET'
+      }
+    );
 
   const asset =
     await env.ASSETS.fetch(assetReq);
@@ -354,9 +341,6 @@ async function serveShopPage(
     productData = null;
   }
 
-  /*
-    商品分享頁
-  */
   if (productRow) {
     let product =
       productData &&
@@ -368,11 +352,6 @@ async function serveShopPage(
           )
         : null;
 
-    /*
-      LINE 新商品縮圖修正：
-      如果快取還沒有剛上架的商品，
-      不導回首頁，立即強制重新抓最新商品。
-    */
     if (!product) {
       try {
         const cache =
@@ -402,8 +381,7 @@ async function serveShopPage(
             freshData.products
           )
         ) {
-          productData =
-            freshData;
+          productData = freshData;
 
           product =
             freshData.products.find(
@@ -415,10 +393,6 @@ async function serveShopPage(
       } catch (_) {}
     }
 
-    /*
-      找不到商品時不再 302 回首頁。
-      否則 LINE 會把首頁 OG 當商品縮圖。
-    */
     if (!product) {
       return new Response(
         '商品暫時讀取不到，請稍後再試',
@@ -515,11 +489,9 @@ async function serveShopPage(
         html,
         canonical
       );
+
   } else {
-    /*
-      Safari 首頁：
-      商品 API 暫時讀不到，也不要擋住商城首頁。
-    */
+
     if (productData) {
       html =
         injectSeed(
@@ -553,6 +525,143 @@ async function serveShopPage(
   );
 }
 
+/* ==========================================
+   LINE Login callback
+========================================== */
+
+async function handleLineAuthCallback(request) {
+
+  const url =
+    new URL(request.url);
+
+  const code =
+    String(
+      url.searchParams.get('code') || ''
+    ).trim();
+
+  const state =
+    String(
+      url.searchParams.get('state') || ''
+    ).trim();
+
+  const lineError =
+    String(
+      url.searchParams.get(
+        'error_description'
+      ) ||
+      url.searchParams.get(
+        'error'
+      ) ||
+      ''
+    ).trim();
+
+  if (lineError) {
+    return Response.redirect(
+      SITE_ORIGIN +
+      '/#line_error=' +
+      encodeURIComponent(lineError),
+      302
+    );
+  }
+
+  if (!code || !state) {
+    return Response.redirect(
+      SITE_ORIGIN +
+      '/#line_error=' +
+      encodeURIComponent(
+        'LINE 登入回傳資料不完整'
+      ),
+      302
+    );
+  }
+
+  const target =
+    new URL(GAS_URL);
+
+  target.searchParams.set(
+    'api',
+    'lineCallback'
+  );
+
+  target.searchParams.set(
+    'code',
+    code
+  );
+
+  target.searchParams.set(
+    'state',
+    state
+  );
+
+  const result =
+    await readGasJson(
+      target.toString(),
+      {
+        method: 'GET',
+        headers: {
+          'accept':
+            'application/json,text/plain,*/*',
+          'cache-control':
+            'no-cache'
+        }
+      }
+    );
+
+  if (!result.ok) {
+    return Response.redirect(
+      SITE_ORIGIN +
+      '/#line_error=' +
+      encodeURIComponent(
+        result.message ||
+        'LINE 身分確認失敗'
+      ),
+      302
+    );
+  }
+
+  let data;
+
+  try {
+    data =
+      JSON.parse(result.text);
+  } catch (_) {
+    return Response.redirect(
+      SITE_ORIGIN +
+      '/#line_error=' +
+      encodeURIComponent(
+        'LINE 身分確認格式異常'
+      ),
+      302
+    );
+  }
+
+  if (
+    !data ||
+    data.success === false ||
+    !data.rememberToken
+  ) {
+    return Response.redirect(
+      SITE_ORIGIN +
+      '/#line_error=' +
+      encodeURIComponent(
+        data && data.message
+          ? data.message
+          : 'LINE 身分確認失敗'
+      ),
+      302
+    );
+  }
+
+  return Response.redirect(
+    SITE_ORIGIN +
+    '/#line_token=' +
+    encodeURIComponent(
+      String(data.rememberToken)
+    ),
+    302
+  );
+}
+
 async function proxyGet(
   request,
   ctx
@@ -565,9 +674,7 @@ async function proxyGet(
       'action'
     ) || '';
 
-  if (
-    action === 'products'
-  ) {
+  if (action === 'products') {
     return getProductsFast(
       request,
       ctx
@@ -636,9 +743,8 @@ async function proxyGet(
   );
 }
 
-async function proxyPost(
-  request
-) {
+async function proxyPost(request) {
+
   const incoming =
     await request.json();
 
@@ -664,9 +770,8 @@ async function proxyPost(
     action
   );
 
-  if (
-    action === 'wishlist'
-  ) {
+  if (action === 'wishlist') {
+
     body.set(
       'rememberToken',
       String(
@@ -685,20 +790,21 @@ async function proxyPost(
           : []
       )
     );
+
   } else {
+
     Object.entries(
       payload || {}
     ).forEach(
       ([key, value]) => {
+
         body.set(
           key,
-          typeof value ===
-            'string'
+          typeof value === 'string'
             ? value
-            : JSON.stringify(
-                value
-              )
+            : JSON.stringify(value)
         );
+
       }
     );
   }
@@ -735,10 +841,8 @@ async function proxyPost(
         await fetch(
           location,
           {
-            method:
-              'GET',
-            redirect:
-              'follow',
+            method: 'GET',
+            redirect: 'follow',
             headers: {
               'accept':
                 'application/json,text/plain,*/*',
@@ -795,25 +899,43 @@ async function proxyPost(
 }
 
 export default {
+
   async fetch(
     request,
     env,
     ctx
   ) {
+
     try {
+
       const url =
         new URL(
           request.url
         );
 
-      /* API */
+      /* =========================
+         LINE OAuth callback
+      ========================= */
+
       if (
-        url.pathname ===
-        '/api'
+        request.method === 'GET' &&
+        url.pathname === '/auth/callback'
       ) {
+        return handleLineAuthCallback(
+          request
+        );
+      }
+
+      /* =========================
+         API
+      ========================= */
+
+      if (
+        url.pathname === '/api'
+      ) {
+
         if (
-          request.method ===
-          'GET'
+          request.method === 'GET'
         ) {
           return proxyGet(
             request,
@@ -822,8 +944,7 @@ export default {
         }
 
         if (
-          request.method ===
-          'POST'
+          request.method === 'POST'
         ) {
           return proxyPost(
             request
@@ -840,11 +961,14 @@ export default {
         );
       }
 
-      /* 網頁 */
+      /* =========================
+         網頁
+      ========================= */
+
       if (
-        request.method ===
-        'GET'
+        request.method === 'GET'
       ) {
+
         const m =
           url.pathname.match(
             /^\/p\/(\d+)\/?$/
@@ -870,22 +994,14 @@ export default {
           );
         }
 
-        /*
-         /*
-  Safari 修正：
-  /index.html 與 / 使用完全相同的商城首頁流程
-*/
-if (
-  url.pathname ===
-  '/index.html'
-) {
-  return serveShopPage(
-    request,
-    env,
-    ctx,
-    null
-  );
-}
+        if (
+          url.pathname ===
+          '/index.html'
+        ) {
+          return env.ASSETS.fetch(
+            request
+          );
+        }
       }
 
       return env.ASSETS.fetch(
@@ -893,6 +1009,7 @@ if (
       );
 
     } catch (err) {
+
       return jsonResponse(
         {
           success: false,
@@ -904,6 +1021,7 @@ if (
         },
         500
       );
+
     }
   }
 };
