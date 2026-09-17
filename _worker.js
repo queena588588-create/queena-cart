@@ -305,10 +305,7 @@ function injectSeed(
 
 /* ==========================================
    首頁 / 分享商品頁
-   修正重點：
-   不再要求 /index.html
-   直接向 Pages Assets 讀取 /
-   避免 /index.html → / → /index.html 無限循環
+   Safari + LINE 新商品縮圖修正版
 ========================================== */
 
 async function serveShopPage(
@@ -317,25 +314,24 @@ async function serveShopPage(
   ctx,
   productRow
 ) {
-  const assetUrl =
-    new URL(request.url);
-
+  const assetUrl = new URL(request.url);
   assetUrl.pathname = '/';
   assetUrl.search = '';
 
-  const assetReq =
-    new Request(
-      assetUrl.toString(),
-      {
-        method: 'GET',
-        headers: request.headers
-      }
-    );
+  /*
+    Safari 修正：
+    讀 Pages 首頁資產時，不再把 Safari 原始
+    request headers 整包帶給 ASSETS。
+  */
+  const assetReq = new Request(
+    assetUrl.toString(),
+    {
+      method: 'GET'
+    }
+  );
 
   const asset =
-    await env.ASSETS.fetch(
-      assetReq
-    );
+    await env.ASSETS.fetch(assetReq);
 
   if (!asset.ok) {
     return asset;
@@ -352,30 +348,96 @@ async function serveShopPage(
         request,
         ctx
       );
+  } catch (_) {
+    productData = null;
+  }
 
-    html =
-      injectSeed(
-        html,
-        productData
-      );
-  } catch (_) {}
+  /*
+    商品分享頁
+  */
+  if (productRow) {
+    let product =
+      productData &&
+      Array.isArray(productData.products)
+        ? productData.products.find(
+            p =>
+              String(p.row) ===
+              String(productRow)
+          )
+        : null;
 
-  if (
-    productRow &&
-    productData
-  ) {
-    const product =
-      productData.products.find(
-        p =>
-          String(p.row) ===
-          String(productRow)
-      );
-
+    /*
+      LINE 新商品縮圖修正：
+      如果快取還沒有剛上架的商品，
+      不導回首頁，立即強制重新抓最新商品。
+    */
     if (!product) {
-      return Response.redirect(
-        SITE_ORIGIN + '/',
-        302
+      try {
+        const cache =
+          caches.default;
+
+        const key =
+          productCacheKey(request);
+
+        const freshResponse =
+          await refreshProductCache(
+            cache,
+            key
+          );
+
+        const freshText =
+          await freshResponse
+            .clone()
+            .text();
+
+        const freshData =
+          JSON.parse(freshText);
+
+        if (
+          freshData &&
+          freshData.success !== false &&
+          Array.isArray(
+            freshData.products
+          )
+        ) {
+          productData =
+            freshData;
+
+          product =
+            freshData.products.find(
+              p =>
+                String(p.row) ===
+                String(productRow)
+            );
+        }
+      } catch (_) {}
+    }
+
+    /*
+      找不到商品時不再 302 回首頁。
+      否則 LINE 會把首頁 OG 當商品縮圖。
+    */
+    if (!product) {
+      return new Response(
+        '商品暫時讀取不到，請稍後再試',
+        {
+          status: 503,
+          headers: {
+            'content-type':
+              'text/plain; charset=UTF-8',
+            'cache-control':
+              'no-store, no-cache, must-revalidate, max-age=0'
+          }
+        }
       );
+    }
+
+    if (productData) {
+      html =
+        injectSeed(
+          html,
+          productData
+        );
     }
 
     const name =
@@ -400,23 +462,24 @@ async function serveShopPage(
         String(product.row)
       );
 
-   const desc =
-  'Queena SELECT｜Queena 私心推薦 ♡';
+    const desc =
+      'Queena SELECT｜Queena 私心推薦 ♡';
 
-html =
-  html.replace(
-    /<title>[\s\S]*?<\/title>/i,
-    '<title>' +
-      escAttr(name) +
-      '</title>'
-  );
+    html =
+      html.replace(
+        /<title>[\s\S]*?<\/title>/i,
+        '<title>' +
+          escAttr(name) +
+          '</title>'
+      );
 
-html =
-  replaceOrAddMeta(
-    html,
-    'og:title',
-    name
-  );
+    html =
+      replaceOrAddMeta(
+        html,
+        'og:title',
+        name
+      );
+
     html =
       replaceOrAddMeta(
         html,
@@ -451,6 +514,18 @@ html =
         canonical
       );
   } else {
+    /*
+      Safari 首頁：
+      商品 API 暫時讀不到，也不要擋住商城首頁。
+    */
+    if (productData) {
+      html =
+        injectSeed(
+          html,
+          productData
+        );
+    }
+
     html =
       replaceCanonical(
         html,
@@ -467,8 +542,10 @@ html =
           'text/html; charset=UTF-8',
         'cache-control':
           'no-store, no-cache, must-revalidate, max-age=0',
-        'pragma': 'no-cache',
-        'expires': '0'
+        'pragma':
+          'no-cache',
+        'expires':
+          '0'
       }
     }
   );
@@ -637,7 +714,8 @@ async function proxyPost(
         },
         body:
           body.toString(),
-        redirect: 'manual'
+        redirect:
+          'manual'
       }
     );
 
@@ -655,7 +733,8 @@ async function proxyPost(
         await fetch(
           location,
           {
-            method: 'GET',
+            method:
+              'GET',
             redirect:
               'follow',
             headers: {
@@ -790,9 +869,8 @@ export default {
         }
 
         /*
-          如果有人輸入 /index.html，
-          直接交給 Pages 靜態檔案處理，
-          不再重新進 serveShopPage。
+          /index.html 直接交給
+          Pages 靜態檔案處理。
         */
         if (
           url.pathname ===
