@@ -5733,12 +5733,12 @@ function renderCartPanel(){
           (
             getProductSpecs(product).length
               ? '<div class="cartSpecBox">' +
-                  '<div class="cartSpecLabel">規格選擇 <span class="specRequired">＊請選規格</span></div>' +
+                  '<div class="cartSpecLabel">規格選擇 <span class="specRequired">＊可複選</span></div>' +
                   '<div class="cartSpecChoices">' +
                     getProductSpecs(product).map(function(spec){
                       return (
                         '<button type="button" class="cartSpecBtn ' +
-                        (item.spec === spec ? 'active' : '') +
+                        (String(item.spec || '').split('｜').map(function(v){ return v.trim(); }).filter(Boolean).includes(spec) ? 'active' : '') +
                         '" data-spec="' +
                         escapeHtml(spec) +
                         '">' +
@@ -5790,8 +5790,24 @@ function renderCartPanel(){
 
         specBtn.addEventListener('click', function(){
 
-          item.spec =
+          const clickedSpec =
             specBtn.getAttribute('data-spec') || '';
+
+          let selectedSpecs =
+            String(item.spec || '')
+              .split('｜')
+              .map(function(v){ return v.trim(); })
+              .filter(Boolean);
+
+          if(selectedSpecs.includes(clickedSpec)){
+            selectedSpecs = selectedSpecs.filter(function(v){
+              return v !== clickedSpec;
+            });
+          }else{
+            selectedSpecs.push(clickedSpec);
+          }
+
+          item.spec = selectedSpecs.join('｜');
 
           updateCart();
           renderCartPanel();
