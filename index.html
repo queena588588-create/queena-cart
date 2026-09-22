@@ -3678,6 +3678,23 @@ body.product-detail-open{
 .qeFeatureArt{flex:0 0 155px;height:135px;display:flex;align-items:center;justify-content:center}
 .qeFeatureArt svg{width:132px;height:112px;stroke:#69463f;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .qeFeatureText{min-width:0}.qeFeatureTitle{font-family:Georgia,"Noto Serif TC",serif;font-size:27px;line-height:1.2;margin-bottom:8px;color:#4e2e29}.qeFeatureSub{font-size:17px;line-height:1.55;color:#7e514b}.qeFeatureBtn{display:inline-flex;align-items:center;gap:8px;margin-top:17px;padding:10px 20px;border-radius:999px;background:#b85d62;color:#fff;font-size:15px;font-weight:800}
+
+/* 首頁新品 / 本週熱門：直接使用商品資料庫圖片，不另做 Banner */
+.qeHighlights{padding:30px 24px 8px;background:#fffaf8}
+.qeHighlightBlock{position:relative;max-width:1040px;margin:0 auto 34px}
+.qeHighlightHead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:0 0 15px}
+.qeHighlightEn{display:block;font-family:Georgia,"Times New Roman",serif;font-size:31px;line-height:1;color:#5a302d;letter-spacing:.025em}
+.qeHighlightZh{display:block;margin-top:7px;font-size:17px;color:#a06f68}
+.qeHighlightTrack{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 48px)/4);gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:2px 1px 8px}
+.qeHighlightTrack::-webkit-scrollbar{display:none}
+.qeProductSlide{scroll-snap-align:start;border:0;padding:0;background:#fff;overflow:hidden;border-radius:18px;text-align:left;cursor:pointer;color:#4f302b;box-shadow:0 4px 14px rgba(100,54,48,.06);font:inherit}
+.qeProductSlide img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#f7ece8}
+.qeProductSlideNoPhoto{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1/1;background:#f7ece8;color:#b88b82;font-size:34px}
+.qeProductSlideName{display:block;padding:11px 12px 13px;font-size:14px;font-weight:700;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qeHighlightEmpty{padding:20px 4px;color:#a4867f;font-size:14px}
+.qeSlideArrow{position:absolute;top:50%;z-index:2;width:38px;height:38px;border:1px solid #ead8d3;border-radius:50%;background:rgba(255,252,250,.96);color:#6c4841;font-size:23px;line-height:34px;cursor:pointer;box-shadow:0 4px 14px rgba(92,55,48,.08)}
+.qeSlideArrow.prev{left:-18px}.qeSlideArrow.next{right:-18px}
+@media(max-width:760px){.qeHighlights{padding:24px 12px 4px}.qeHighlightBlock{margin-bottom:28px}.qeHighlightEn{font-size:27px}.qeHighlightZh{font-size:15px}.qeHighlightTrack{grid-auto-columns:72%;gap:12px}.qeSlideArrow{display:none}.qeProductSlideName{font-size:13px}}
 .qeFooter{background:#fff;padding:26px 28px 16px;border-top:1px solid #eee2dd}
 .qeFooterMain{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap}.qeFooterNav{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}.qeFooterLink{border:0;background:transparent;color:#49332f;padding:8px 20px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;border-right:1px solid #e5d9d5}.qeFooterLink:last-child{border-right:0}.qeSocial{display:flex;align-items:center;gap:13px;padding-left:20px;border-left:1px solid #e5d9d5}.qeSocial a{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;color:#4d3632;border:1px solid #ded1cd;font-weight:900;font-size:13px;background:#fff}.qeCopyright{text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid #e8ddd9;font-size:12px;color:#8b7470}
 .qeInfoOverlay{position:fixed;inset:0;z-index:100100;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(58,39,35,.45);backdrop-filter:blur(3px)}.qeInfoOverlay.show{display:flex}.qeInfoPanel{width:min(620px,100%);max-height:82vh;overflow:auto;background:#fffaf8;border-radius:24px;padding:26px;box-shadow:0 20px 60px rgba(55,34,30,.22);position:relative}.qeInfoClose{position:absolute;right:16px;top:14px;width:38px;height:38px;border:0;border-radius:50%;background:#f2e5e1;color:#65463f;font-size:22px;cursor:pointer}.qeInfoTitle{font-family:Georgia,"Noto Serif TC",serif;font-size:26px;color:#5a302d;margin:0 46px 16px 0}.qeInfoBody{font-size:15px;line-height:1.9;color:#684e48;white-space:pre-wrap}.qeInfoLoading{color:#9a7e78}
@@ -4333,6 +4350,20 @@ html[data-queena-share="1"] #queenaHomeEntry{
         <button class="qeCatBtn qeHotspot" data-qe-mode="cat" data-qe-name="居家生活"><span class="qeCatCircle"><svg viewBox="0 0 64 64"><path d="M8 31 32 10l24 21"/><path d="M14 27v28h36V27"/><path d="M26 55V39h12v16"/></svg></span><span class="qeCatLabel">居家生活</span></button>
         <button class="qeCatBtn qeHotspot" data-qe-mode="cat" data-qe-name="兒童用品專區"><span class="qeCatCircle"><svg viewBox="0 0 64 64"><circle cx="32" cy="34" r="19"/><path d="M22 17c2-7 9-10 15-7 2 1 4 3 5 6M24 32h.1M40 32h.1M25 41c4 4 10 4 14 0"/></svg></span><span class="qeCatLabel">童裝・文具</span></button>
         <button class="qeCatBtn qeHotspot" data-qe-mode="cat" data-qe-name="全球代購"><span class="qeCatCircle"><svg viewBox="0 0 64 64"><path d="m8 35 20-4 13-19 6 1-7 17 14-2 5 5-19 5-7 15-5 1 2-14-14 4z"/></svg></span><span class="qeCatLabel">全球代購</span></button>
+      </div>
+    </section>
+    <section class="qeHighlights" aria-label="新品與本週熱門">
+      <div class="qeHighlightBlock">
+        <div class="qeHighlightHead"><div><span class="qeHighlightEn">NEW ARRIVAL</span><span class="qeHighlightZh">新品上架</span></div></div>
+        <button type="button" class="qeSlideArrow prev" data-qe-slide="qeNewArrivalTrack" aria-label="上一個">‹</button>
+        <div class="qeHighlightTrack" id="qeNewArrivalTrack"></div>
+        <button type="button" class="qeSlideArrow next" data-qe-slide="qeNewArrivalTrack" aria-label="下一個">›</button>
+      </div>
+      <div class="qeHighlightBlock">
+        <div class="qeHighlightHead"><div><span class="qeHighlightEn">THIS WEEK</span><span class="qeHighlightZh">本週熱門</span></div></div>
+        <button type="button" class="qeSlideArrow prev" data-qe-slide="qeThisWeekTrack" aria-label="上一個">‹</button>
+        <div class="qeHighlightTrack" id="qeThisWeekTrack"></div>
+        <button type="button" class="qeSlideArrow next" data-qe-slide="qeThisWeekTrack" aria-label="下一個">›</button>
       </div>
     </section>
     <section class="qeFeatureArea">
@@ -5154,6 +5185,7 @@ function applyQueenaProducts(data){
   }
 
   products = data.products;
+  try{ if(typeof window.queenaRenderHomeHighlights === 'function') window.queenaRenderHomeHighlights(); }catch(e){}
 
   try{ loading.style.display = 'none'; }catch(e){}
   try{
@@ -7916,12 +7948,50 @@ function openSharedQueenaProduct(){
     scheduleApply();
   }
 
+  function homeEscape(value){
+    return String(value == null ? '' : value).replace(/[&<>"']/g,function(ch){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+    });
+  }
+
+  function renderHomeTrack(id,items,emptyText){
+    var track=document.getElementById(id);
+    if(!track) return;
+    if(!items.length){ track.innerHTML='<div class="qeHighlightEmpty">'+homeEscape(emptyText)+'</div>'; return; }
+    track.innerHTML=items.map(function(p){
+      var photo=p.photo ? '<img loading="lazy" decoding="async" src="'+homeEscape(p.photo)+'" alt="'+homeEscape(p.name||'')+'">' : '<span class="qeProductSlideNoPhoto">♡</span>';
+      return '<button type="button" class="qeProductSlide" data-qe-product="'+homeEscape(p.name||'')+'">'+photo+'<span class="qeProductSlideName">'+homeEscape(p.name||'')+'</span></button>';
+    }).join('');
+  }
+
+  window.queenaRenderHomeHighlights=function(){
+    if(typeof products==='undefined' || !Array.isArray(products)) return;
+    renderHomeTrack('qeNewArrivalTrack',products.filter(function(p){return !!p.newItem;}),'目前還沒有新品上架');
+    renderHomeTrack('qeThisWeekTrack',products.filter(function(p){return !!p.hot;}),'目前還沒有本週熱門商品');
+  };
+
   document.addEventListener('click',function(e){
+    var arrow=e.target.closest && e.target.closest('#queenaHomeEntry .qeSlideArrow');
+    if(arrow){
+      e.preventDefault();
+      var track=document.getElementById(arrow.getAttribute('data-qe-slide'));
+      if(track){ track.scrollBy({left:(arrow.classList.contains('prev')?-1:1)*Math.max(260,track.clientWidth*.78),behavior:'smooth'}); }
+      return;
+    }
+    var productBtn=e.target.closest && e.target.closest('#queenaHomeEntry .qeProductSlide');
+    if(productBtn){
+      e.preventDefault();
+      var productName=productBtn.getAttribute('data-qe-product')||'';
+      hideHome();
+      setTimeout(function(){ if(typeof openProductDetail==='function') openProductDetail(productName); },30);
+      return;
+    }
     var btn = e.target.closest && e.target.closest('#queenaHomeEntry .qeHotspot');
     if(!btn) return;
     e.preventDefault();
     openTarget(btn.getAttribute('data-qe-mode') || 'all', btn.getAttribute('data-qe-name') || '');
   });
+  try{ window.queenaRenderHomeHighlights(); }catch(e){}
 })();
 </script>
 <!-- QUEENA_HOME_END_JS -->
