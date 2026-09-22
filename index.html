@@ -4360,7 +4360,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
         <button type="button" class="qeSlideArrow next" data-qe-slide="qeNewArrivalTrack" aria-label="下一個">›</button>
       </div>
       <div class="qeHighlightBlock">
-        <div class="qeHighlightHead"><div><span class="qeHighlightEn">THIS WEEK</span><span class="qeHighlightZh">本週熱門</span></div></div>
+        <div class="qeHighlightHead"><div><span class="qeHighlightEn">BEST SELLERS</span><span class="qeHighlightZh">熱銷推薦</span></div></div>
         <button type="button" class="qeSlideArrow prev" data-qe-slide="qeThisWeekTrack" aria-label="上一個">‹</button>
         <div class="qeHighlightTrack" id="qeThisWeekTrack"></div>
         <button type="button" class="qeSlideArrow next" data-qe-slide="qeThisWeekTrack" aria-label="下一個">›</button>
@@ -7964,10 +7964,50 @@ function openSharedQueenaProduct(){
     }).join('');
   }
 
+  var homeHighlightAutoTimers = {};
+
+  function stopHomeHighlightAuto(id){
+    if(homeHighlightAutoTimers[id]){
+      clearInterval(homeHighlightAutoTimers[id]);
+      homeHighlightAutoTimers[id] = null;
+    }
+  }
+
+  function startHomeHighlightAuto(id){
+    var track=document.getElementById(id);
+    if(!track) return;
+    stopHomeHighlightAuto(id);
+    if(track.children.length < 2) return;
+
+    homeHighlightAutoTimers[id]=setInterval(function(){
+      if(document.hidden || !document.getElementById('queenaHomeEntry')) return;
+      var maxScroll=track.scrollWidth-track.clientWidth;
+      if(maxScroll <= 8) return;
+      var step=Math.max(220,Math.min(track.clientWidth*.78,360));
+      if(track.scrollLeft >= maxScroll-8){
+        track.scrollTo({left:0,behavior:'smooth'});
+      }else{
+        track.scrollBy({left:step,behavior:'smooth'});
+      }
+    },3800);
+
+    if(!track.dataset.qeAutoBound){
+      track.dataset.qeAutoBound='1';
+      ['mouseenter','touchstart','pointerdown'].forEach(function(evt){
+        track.addEventListener(evt,function(){ stopHomeHighlightAuto(id); },{passive:true});
+      });
+      ['mouseleave','touchend','pointerup','pointercancel'].forEach(function(evt){
+        track.addEventListener(evt,function(){ setTimeout(function(){ startHomeHighlightAuto(id); },1200); },{passive:true});
+      });
+    }
+  }
+
   window.queenaRenderHomeHighlights=function(){
     if(typeof products==='undefined' || !Array.isArray(products)) return;
     renderHomeTrack('qeNewArrivalTrack',products.filter(function(p){return !!p.newItem;}),'目前還沒有新品上架');
     renderHomeTrack('qeThisWeekTrack',products.filter(function(p){return !!p.hot;}),'目前還沒有本週熱門商品');
+    startHomeHighlightAuto('qeNewArrivalTrack');
+    startHomeHighlightAuto('qeThisWeekTrack');
   };
 
   document.addEventListener('click',function(e){
