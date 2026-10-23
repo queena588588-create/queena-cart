@@ -5007,12 +5007,14 @@ async function apiPost(action, payload){
 
 // LINE 登入由 GAS callback 回到 Cloudflare 時，
 // 安全憑證放在 URL #fragment，不會送到網站伺服器。
+let lineReturnedFromLogin=false;
 (function receiveLineTokenFromHash_(){
   const hash = new URLSearchParams(
     (window.location.hash || '').replace(/^#/, '')
   );
 
   const token = hash.get('line_token') || '';
+  lineReturnedFromLogin=!!token;
 
   if(token){
     queenaLocalStorage.setItem(
@@ -5106,6 +5108,7 @@ function tryQuickLineAuth_(done){
 
       if(profile && profile.userId){
         lineProfile = profile;
+        if(handleLineOrderReceipt_(profile)) return;
         if(typeof done === 'function') done(true);
         tryAutoSubmitPending_();
         return;
@@ -6223,6 +6226,22 @@ sendBtn.addEventListener('click', function(){
 // 第一次／憑證失效時才跑完整 LINE Login
 // ==============================
 
+
+function queenaLineItems_(items){
+  const result=items.map(function(item){return {name:item.name,spec:item.spec || '',qty:Number(item.qty),intent:item.intent==='ask'?'ask':'buy'};});
+  if(hasQueenaCoupon() && !result.some(function(i){return i.name===QUEENA_COUPON_ITEM_NAME;})) result.push({name:QUEENA_COUPON_ITEM_NAME,spec:'',qty:1,intent:'buy'});
+  return result;
+}
+function queenaWishlistId_(items){
+  const fingerprint=JSON.stringify(items);
+  let id=queenaLocalStorage.getItem('queenaWishlistRequestId');
+  if(!id || queenaLocalStorage.getItem('queenaWishlistFingerprint')!==fingerprint){
+    id=window.crypto && typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():'wishlist-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+    queenaLocalStorage.setItem('queenaWishlistRequestId',id);queenaLocalStorage.setItem('queenaWishlistFingerprint',fingerprint);
+  }
+  return id;
+}
+
 function startFullLineLogin_(items){
 
   try{
@@ -6259,7 +6278,9 @@ function startFullLineLogin_(items){
   sendBtn.textContent =
     '♡ 正在確認您的 LINE 資料，請稍候…';
 
-  apiGet('lineLogin')
+  const loginItems=queenaLineItems_(items);
+  const requestId=queenaWishlistId_(loginItems);
+  apiPost('lineLoginDraft',{items:loginItems,requestId:requestId})
     .then(function(data){
 
       if(!data || !data.url){
@@ -6359,31 +6380,9 @@ function submitWishlist(items){
   sendBtn.disabled = true;
   sendBtn.textContent = '送出中...';
 
-  const itemsToSend = items.slice();
-
-  if(
-    hasQueenaCoupon() &&
-    !itemsToSend.some(function(item){
-      return item && item.name === QUEENA_COUPON_ITEM_NAME;
-    })
-  ){
-    itemsToSend.push({
-      name: QUEENA_COUPON_ITEM_NAME,
-      qty: 1,
-      intent: 'buy',
-      spec: ''
-    });
-  }
-
-  wishlistSubmitting = true;
-  queenaOrderInFlight = true;
-  let wishlistRequestId=queenaLocalStorage.getItem('queenaWishlistRequestId');
-  const wishlistFingerprint=JSON.stringify(itemsToSend);
-  if(!wishlistRequestId || queenaLocalStorage.getItem('queenaWishlistFingerprint')!==wishlistFingerprint){
-    wishlistRequestId=(window.crypto && typeof window.crypto.randomUUID==='function') ? window.crypto.randomUUID() : 'wishlist-'+Date.now()+'-'+Math.random().toString(36).slice(2);
-    queenaLocalStorage.setItem('queenaWishlistRequestId',wishlistRequestId);
-    queenaLocalStorage.setItem('queenaWishlistFingerprint',wishlistFingerprint);
-  }
+  const itemsToSend=queenaLineItems_(items);
+  wishlistSubmitting=true;queenaOrderInFlight=true;
+  const wishlistRequestId=queenaWishlistId_(itemsToSend);
   apiPost('wishlist', {
     requestId:wishlistRequestId,
     rememberToken: rememberToken,
@@ -6468,6 +6467,32 @@ function submitWishlist(items){
 // ==============================
 // LINE 登入錯誤
 // ==============================
+
+function handleLineOrderReceipt_(profile){
+  if(!lineReturnedFromLogin || !profile || !profile.orderReceipt) return false;
+  const receipt=profile.orderReceipt;
+  if(!receipt.at || Date.now()-Number(receipt.at)>10*60*1000) return false;
+  lineReturnedFromLogin=false;
+  queenaLocalStorage.removeItem('queenaPendingSend');
+  queenaSessionStorage.removeItem('queenaPendingSendBackup');
+  pendingSubmitInFlight=false;wishlistSubmitting=false;queenaOrderInFlight=false;
+  sendBtn.disabled=false;sendBtn.textContent='LINE 確認訂單';
+  if(receipt.saved){
+    ['queenaPendingCart','queenaWishlistRequestId','queenaWishlistFingerprint'].forEach(function(k){queenaLocalStorage.removeItem(k);});
+    queenaSessionStorage.removeItem('queenaPendingCartBackup');
+    queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);cart={};
+    updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
+  }
+  setTimeout(function(){
+    overlay.classList.add('show');overlay.style.display='flex';
+    let status=document.getElementById('lineReturnResult');
+    if(!status){status=document.createElement('div');status.id='lineReturnResult';status.className='messageBox';messageBox.parentNode.insertBefore(status,messageBox.nextSibling);}
+    status.textContent=receipt.saved?'✅ LINE身分已確認，清單已存入試算表。'+(receipt.notice?'LINE已接受通知。':'請主動聯絡Queena確認清單。'):'LINE身分已確認，清單尚未完成儲存：'+(receipt.error || '請向Queena查詢');
+    showLineContactPrompt_();
+    alert(receipt.saved?'✅ LINE確認訂單已完成，清單已儲存。':'清單尚未完成儲存：'+(receipt.error || '請向Queena查詢'));
+  },300);
+  return true;
+}
 
 if(lineLoginError){
 
@@ -8402,7 +8427,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   const wrap = document.createElement('section');
   wrap.id = 'checkoutSection';
   wrap.innerHTML = `<button type="button" id="openCheckout" class="actionBtn" style="background:#725b4c;color:white">🛒 直接結帳</button>
-  <form id="checkoutForm" hidden style="text-align:left;padding:16px 0">
+  <form id="checkoutForm" novalidate hidden style="text-align:left;padding:16px 0">
     <h3>收件與付款資料</h3>
     <p>不必登入 LINE。送出後會建立待確認訂單，Queena 會核對商品、運費與總額。</p>
     <label>訂購人姓名<input name="buyerName" required maxlength="40" autocomplete="name"></label>
@@ -8412,16 +8437,17 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     <label>手機號碼<input name="phone" required type="tel" inputmode="tel" pattern="09[0-9]{8}" placeholder="09 開頭，共 10 碼" autocomplete="shipping tel"></label>
     <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option></select></label>
     <div id="homeFields"><label>收件地址<input name="address" required maxlength="180" autocomplete="shipping street-address"></label></div>
-    <div id="storeFields" hidden><p>請填寫確定可取貨的門市；實際寄件服務由 Queena 確認。</p><label>門市名稱<input name="storeName" maxlength="60" placeholder="例如：○○門市"></label><label>門市店號<input name="storeCode" maxlength="12" inputmode="numeric" placeholder="請核對門市店號"></label></div>
-    <label>付款方式<select name="payment"><option value="銀行轉帳">銀行轉帳</option><option value="貨到付款">貨到付款</option></select></label>
-    <p>轉帳：確認金額後，透過 LINE 私訊提供匯款資料。貨到付款：需由 Queena 確認商品與配送服務是否適用。</p>
+    <div id="storeFields" hidden><p>請填寫確定可取貨的門市；實際寄件服務由 Queena 確認。</p><label>門市名稱<input name="storeName" maxlength="60" placeholder="例如：○○門市"></label><label>縣市／區<input name="storeArea" maxlength="60" placeholder="例如：新北市／板橋區"></label></div>
+    <label>付款方式<select name="payment"><option value="銀行轉帳">銀行轉帳</option><option value="LINE Pay">LINE Pay</option><option value="貨到付款">貨到付款</option></select></label>
+    <p>轉帳：確認金額後，透過 LINE 私訊提供匯款資料。LINE Pay：確認金額後，由 Queena 透過 LINE 提供付款資訊。貨到付款僅限 7-11／全家；宅配可選銀行轉帳或 LINE Pay。</p>
     <label>LINE ID（選填）<input name="lineId" maxlength="60" placeholder="不知道可以留白，Queena 可用電話聯絡你"></label>
     <label>LINE 顯示名稱（選填）<input name="lineName" maxlength="60" placeholder="方便 Queena 對照你的訊息"></label>
     <p>不知道 LINE ID 也能下單。你可以主動加 Queena 好友並傳送訂單編號，或由 Queena 用訂購人電話聯絡你。</p>
     <a class="checkoutLineLink" href="https://line.me/ti/p/aZ1M8UpSkD" target="_blank" rel="noopener noreferrer">💚 加 Queena LINE 好友</a>
     <label>備註<textarea name="note" maxlength="500" rows="2"></textarea></label>
     <div id="checkoutSummary" class="messageBox"></div>
-    <p><strong>運費、貨到付款費用：待 Queena 確認。</strong><br>優惠價尚未確認的商品不會被當成 $0；下單後請勿先行匯款。</p>
+    <div id="checkoutShippingSummary" class="messageBox" aria-live="polite"></div>
+    <p><strong>7-11／全家運費 $40；宅配運費待 Queena 確認。</strong><br>優惠價尚未確認的商品不會被當成 $0；下單後請勿先行匯款。</p>
     <label style="display:flex;gap:8px;align-items:flex-start"><input name="consent" type="checkbox" required style="width:auto;margin-top:4px">我同意提供上述資料，供 Queena 聯絡、處理本次訂單與配送使用。</label>
     <button type="submit" id="checkoutSubmit" class="actionBtn" style="background:#725b4c;color:white">確認資料並送出訂單</button>
   </form><div id="checkoutResult" role="status" aria-live="polite" style="white-space:pre-wrap;text-align:left"></div>`;
@@ -8435,11 +8461,31 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   let inFlight = false, requestId = '', lastPayload = '';
   function toggleFields(){
     const home = form.elements.shipping.value === '宅配';
+    const codOption=Array.from(form.elements.payment.options).find(function(option){return option.value==='貨到付款';});
+    if(codOption){codOption.disabled=home;codOption.hidden=home;}
+    if(home && form.elements.payment.value==='貨到付款') form.elements.payment.value='銀行轉帳';
     document.getElementById('homeFields').hidden = !home;
     document.getElementById('storeFields').hidden = home;
     form.elements.address.required = home;
     form.elements.storeName.required = !home;
-    form.elements.storeCode.required = !home;
+    form.elements.storeArea.required = !home;
+    refreshShippingSummary();
+  }
+  function refreshShippingSummary(){
+    const box=document.getElementById('checkoutShippingSummary');
+    if(!box) return;
+    let subtotal=0,unknown=false;
+    Object.values(cart || {}).forEach(function(item){
+      const product=products.find(function(p){return p.name===item.name;}) || {};
+      const price=parseQueenaPrice_(product.price).amount;
+      if(price===null)unknown=true;else subtotal+=Math.round(price*Number(item.qty)*100)/100;
+    });
+    const discount=hasQueenaCoupon() && subtotal>=500 ? 30 : 0;
+    const fee=form.elements.shipping.value==='宅配' ? null : 40;
+    box.textContent='商品小計：'+formatQueenaMoney_(subtotal)+(unknown?'＋待確認優惠商品':'')+'\n購物券：-'+formatQueenaMoney_(discount)+'\n運費：'+(fee===null?'宅配待確認':'$40')+'\n'+
+      (fee===null?'訂單總額：待確認（商品折抵後 '+formatQueenaMoney_(subtotal-discount)+'，另計宅配運費'+(unknown?'與優惠商品':'')+'）':
+      (unknown?'已知金額（含運）：':'訂單總額（含運）：')+formatQueenaMoney_(subtotal-discount+fee)+(unknown?'，另加待確認優惠商品金額':''));
+    box.style.whiteSpace='pre-wrap';
   }
   function syncReceiver(){
     const same=form.elements.sameReceiver.checked;
@@ -8457,23 +8503,24 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     const items = Object.values(cart || {});
     if(!items.length){ alert('請先加入商品');return; }
     form.hidden = !form.hidden;
-    document.getElementById('checkoutSummary').innerHTML = createMessage();
+    document.getElementById('checkoutSummary').innerHTML = createMessage();refreshShippingSummary();
     if(!form.hidden) form.scrollIntoView({behavior:'smooth',block:'start'});
   });
-  panel.addEventListener('change',function(){if(!form.hidden)document.getElementById('checkoutSummary').innerHTML=createMessage();});
-  panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage();},0);});
+  panel.addEventListener('change',function(){if(!form.hidden){document.getElementById('checkoutSummary').innerHTML=createMessage();refreshShippingSummary();}});
+  panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage();refreshShippingSummary();},0);});
   form.addEventListener('submit',async function(event){
     event.preventDefault();
     syncReceiver();
-    if(inFlight || queenaOrderInFlight || !form.reportValidity()) return;
+    if(inFlight || queenaOrderInFlight) return;
+    if(!form.reportValidity()){result.textContent='訂單尚未送出，請完成標示的必填欄位。';return;}
     const items = Object.values(cart || {}).map(function(i){return {name:i.name,spec:i.spec || '',qty:Number(i.qty)};});
     if(!items.length){ alert('請先加入商品');return; }
     if(!products.length){ alert('商品資料尚未完成載入，請稍候再試');return; }
     const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || (getProductSpecs(p).length && !getProductSpecs(p).includes(i.spec));});
     if(missing){ alert('請先確認「'+missing.name+'」的規格');renderCartPanel();return; }
     const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
-    ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeCode','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
-    if(payload.shipping==='宅配'){payload.storeName='';payload.storeCode='';}else{payload.address='';}
+    ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeArea','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
+    if(payload.shipping==='宅配'){payload.storeName='';payload.storeArea='';}else{payload.address='';}
     payload.sameReceiver=form.elements.sameReceiver.checked;
     payload.contactMethod=payload.lineId ? 'lineId' : 'phone';
     const fingerprint = JSON.stringify(payload);
@@ -8490,7 +8537,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
         '商品小計：$'+Number(data.subtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認優惠商品':'')+'\n'+
         '購物券：'+(data.discount ? '-$'+data.discount : '未折抵')+'\n'+
         '目前小計：$'+Number(data.currentSubtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認優惠商品':'')+'\n'+
-        '運費與應付總額：待 Queena 確認\n付款：'+payload.payment+'｜配送：'+payload.shipping+'\n'+
+        '運費：'+(data.shippingFee===null?'宅配待確認':'$'+data.shippingFee)+'\n'+(data.totalAmount!==null?'訂單總額（含運）：$'+Number(data.totalAmount).toLocaleString('zh-TW'):data.shippingFee!==null?'已知金額（含運）：$'+Number(data.knownTotal).toLocaleString('zh-TW')+'，另加待確認優惠商品金額':'訂單總額：待確認')+'\n付款：'+payload.payment+'｜配送：'+payload.shipping+'\n'+
         '請加 Queena LINE 好友，主動傳送上方訂單編號。確認後再安排付款與出貨。'+
         (data.notification && !data.notification.accepted ? '\nLINE 自動通知尚未成功；訂單已存入試算表，請主動傳送訂單編號。' : '');
       const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);
