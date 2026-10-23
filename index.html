@@ -8405,6 +8405,9 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   <form id="checkoutForm" hidden style="text-align:left;padding:16px 0">
     <h3>收件與付款資料</h3>
     <p>不必登入 LINE。送出後會建立待確認訂單，Queena 會核對商品、運費與總額。</p>
+    <label>訂購人姓名<input name="buyerName" required maxlength="40" autocomplete="name"></label>
+    <label>訂購人手機<input name="buyerPhone" required type="tel" inputmode="tel" pattern="09[0-9]{8}" placeholder="09 開頭，共 10 碼" autocomplete="tel"></label>
+    <label style="display:flex;gap:8px;align-items:center"><input name="sameReceiver" type="checkbox" checked style="width:auto">收件人同訂購人</label>
     <label>收件人姓名<input name="receiver" required maxlength="40" autocomplete="shipping name"></label>
     <label>手機號碼<input name="phone" required type="tel" inputmode="tel" pattern="09[0-9]{8}" placeholder="09 開頭，共 10 碼" autocomplete="shipping tel"></label>
     <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option></select></label>
@@ -8412,9 +8415,9 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     <div id="storeFields" hidden><p>請填寫確定可取貨的門市；實際寄件服務由 Queena 確認。</p><label>門市名稱<input name="storeName" maxlength="60" placeholder="例如：○○門市"></label><label>門市店號<input name="storeCode" maxlength="12" inputmode="numeric" placeholder="請核對門市店號"></label></div>
     <label>付款方式<select name="payment"><option value="銀行轉帳">銀行轉帳</option><option value="貨到付款">貨到付款</option></select></label>
     <p>轉帳：確認金額後，透過 LINE 私訊提供匯款資料。貨到付款：需由 Queena 確認商品與配送服務是否適用。</p>
-    <label>LINE 聯絡方式<select name="contactMethod"><option value="lineId">填 LINE ID，讓 Queena 加我</option><option value="addFriend">我加 Queena 好友並傳送訂單編號</option></select></label>
-    <div id="lineIdFields"><label>我的 LINE ID<input name="lineId" required maxlength="60" placeholder="請開啟 LINE 的「允許利用 ID 加入好友」"></label></div>
-    <label>LINE 顯示名稱<input name="lineName" maxlength="60" placeholder="方便 Queena 對照你的訊息"></label>
+    <label>LINE ID（選填）<input name="lineId" maxlength="60" placeholder="不知道可以留白，Queena 可用電話聯絡你"></label>
+    <label>LINE 顯示名稱（選填）<input name="lineName" maxlength="60" placeholder="方便 Queena 對照你的訊息"></label>
+    <p>不知道 LINE ID 也能下單。你可以主動加 Queena 好友並傳送訂單編號，或由 Queena 用訂購人電話聯絡你。</p>
     <a class="checkoutLineLink" href="https://line.me/ti/p/aZ1M8UpSkD" target="_blank" rel="noopener noreferrer">💚 加 Queena LINE 好友</a>
     <label>備註<textarea name="note" maxlength="500" rows="2"></textarea></label>
     <div id="checkoutSummary" class="messageBox"></div>
@@ -8437,13 +8440,18 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     form.elements.address.required = home;
     form.elements.storeName.required = !home;
     form.elements.storeCode.required = !home;
-    const byId = form.elements.contactMethod.value === 'lineId';
-    document.getElementById('lineIdFields').hidden = !byId;
-    form.elements.lineId.required = byId;
-    form.elements.lineName.required = !byId;
+  }
+  function syncReceiver(){
+    const same=form.elements.sameReceiver.checked;
+    form.elements.receiver.disabled=same;
+    form.elements.phone.disabled=same;
+    if(same){form.elements.receiver.value=form.elements.buyerName.value;form.elements.phone.value=form.elements.buyerPhone.value;}
   }
   form.elements.shipping.addEventListener('change', toggleFields);
-  form.elements.contactMethod.addEventListener('change', toggleFields);
+  form.elements.sameReceiver.addEventListener('change', syncReceiver);
+  form.elements.buyerName.addEventListener('input', syncReceiver);
+  form.elements.buyerPhone.addEventListener('input', syncReceiver);
+  syncReceiver();
   toggleFields();
   document.getElementById('openCheckout').addEventListener('click',function(){
     const items = Object.values(cart || {});
@@ -8456,6 +8464,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage();},0);});
   form.addEventListener('submit',async function(event){
     event.preventDefault();
+    syncReceiver();
     if(inFlight || queenaOrderInFlight || !form.reportValidity()) return;
     const items = Object.values(cart || {}).map(function(i){return {name:i.name,spec:i.spec || '',qty:Number(i.qty)};});
     if(!items.length){ alert('請先加入商品');return; }
@@ -8463,9 +8472,10 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || (getProductSpecs(p).length && !getProductSpecs(p).includes(i.spec));});
     if(missing){ alert('請先確認「'+missing.name+'」的規格');renderCartPanel();return; }
     const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
-    ['receiver','phone','shipping','address','storeName','storeCode','payment','contactMethod','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
+    ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeCode','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
     if(payload.shipping==='宅配'){payload.storeName='';payload.storeCode='';}else{payload.address='';}
-    if(payload.contactMethod==='addFriend') payload.lineId='';
+    payload.sameReceiver=form.elements.sameReceiver.checked;
+    payload.contactMethod=payload.lineId ? 'lineId' : 'phone';
     const fingerprint = JSON.stringify(payload);
     if(!requestId || fingerprint !== lastPayload){
       requestId = (window.crypto && typeof window.crypto.randomUUID==='function') ? window.crypto.randomUUID() : 'checkout-'+Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -8486,7 +8496,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);
       cart={};queenaLocalStorage.removeItem('queenaPendingCart');queenaLocalStorage.removeItem('queenaPendingSend');queenaSessionStorage.removeItem('queenaPendingCartBackup');queenaSessionStorage.removeItem('queenaPendingSendBackup');
       queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
-      form.reset();toggleFields();form.hidden=true;requestId='';lastPayload='';
+      form.reset();toggleFields();syncReceiver();form.hidden=true;requestId='';lastPayload='';
       result.scrollIntoView({behavior:'smooth',block:'nearest'});
     }catch(err){result.textContent='未取得完成確認：'+err.message+'\n若結果不明，請先向 Queena 查詢，避免重新建立另一筆訂單。';}
     finally{inFlight=false;queenaOrderInFlight=false;sendBtn.disabled=false;submit.disabled=false;submit.textContent='確認資料並送出訂單';}
