@@ -770,8 +770,11 @@ async function proxyPost(request) {
     action
   );
 
-  if (action === 'wishlist') {
+  if (action === 'checkout') {
+    body.set('checkoutJson',JSON.stringify(payload));
+  } else if (action === 'wishlist') {
 
+    body.set('requestId', String(payload.requestId || ''));
     body.set(
       'rememberToken',
       String(
