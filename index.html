@@ -8644,7 +8644,9 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       if(data.discount)receiptLines.push('購物券：−$'+data.discount);
       receiptLines.push(payload.shipping==='宅配'?'宅配運費：免運':'超商運費：$'+data.shippingFee);
       if(typeof data.totalAmount==='number')receiptLines.push('合計（含運）：$'+Number(data.totalAmount).toLocaleString('zh-TW'));
-      receiptLines.push('',payload.shipping+'｜'+payload.payment,payload.payment==='LINE Pay'?'請加 Queena LINE 並傳送訂單編號，Queena 會私訊付款方式。':'請將訂單編號傳給 Queena，方便確認。');
+      receiptLines.push('',payload.shipping+'｜'+payload.payment);
+      if(payload.payment==='LINE Pay')receiptLines.push('請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。');
+      else if(payload.payment==='貨到付款')receiptLines.push('請將訂單編號傳給 Queena，方便確認。');
       if(data.notification && !data.notification.accepted)receiptLines.push('訂單已存入試算表，請主動傳送訂單編號。');
       result.textContent=receiptLines.join('\n');
       completedOrderId=data.orderId;completedBuyerPhone=payload.buyerPhone;
@@ -8652,8 +8654,11 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       transferForm.hidden=payload.payment!=='銀行轉帳';
       bankInfo.hidden=true;bankInfo.textContent='';if(countdownTimer)clearInterval(countdownTimer);
       if(payload.payment==='銀行轉帳'){
+        const payPrompt=document.createElement('div');payPrompt.textContent='也可選 LINE Pay；請將訂單編號傳給 Queena。';bankInfo.appendChild(payPrompt);
+        const lineLink=document.createElement('a');lineLink.href='https://line.me/ti/p/aZ1M8UpSkD';lineLink.target='_blank';lineLink.rel='noopener noreferrer';lineLink.textContent='💚 開啟 Queena LINE';bankInfo.appendChild(lineLink);
+        const separator=document.createElement('hr');separator.style.cssText='border:0;border-top:1px solid #eadfd8;margin:12px 0';bankInfo.appendChild(separator);
         if(data.bankTransfer){
-          const bank=data.bankTransfer,deadline=new Date(data.paymentDueAt).getTime();
+          const bank=data.bankTransfer,deadline=data.paymentDueAt?new Date(data.paymentDueAt).getTime():0;
           const heading=document.createElement('strong');heading.textContent='匯款資料';bankInfo.appendChild(heading);
           [['銀行',bank.bankName],['戶名',bank.accountName],['帳號',bank.accountNumber],['應付金額',typeof data.totalAmount==='number'?'$'+Number(data.totalAmount).toLocaleString('zh-TW'):'待 Queena 確認']].forEach(function(pair){const row=document.createElement('div');row.textContent=pair[0]+'：'+pair[1];bankInfo.appendChild(row);});
           if(typeof data.totalAmount==='number' && data.paymentDueAt){
@@ -8669,7 +8674,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       const reportButton=document.getElementById('transferReportSubmit');reportButton.disabled=false;reportButton.textContent='我已轉帳';
       document.getElementById('transferReportStatus').textContent=payload.payment==='銀行轉帳'?(typeof data.totalAmount==='number'?'匯款後填寫末五碼；訂單維持待人工核帳，逾時也請回報並聯絡 Queena。':'請先等 Queena 確認最終應付金額，再匯款並填寫末五碼。'):payload.payment==='LINE Pay'?'請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。':'';
       document.getElementById('copyOrderId').textContent='📋 複製訂單編號';
-      const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);
+      if(payload.payment!=='銀行轉帳'){const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);}
       cart={};queenaLocalStorage.removeItem('queenaPendingCart');queenaLocalStorage.removeItem('queenaPendingSend');queenaSessionStorage.removeItem('queenaPendingCartBackup');queenaSessionStorage.removeItem('queenaPendingSendBackup');
       queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
       form.reset();toggleFields();syncReceiver();setCheckoutView(false);requestId='';lastPayload='';
