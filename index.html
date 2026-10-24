@@ -8563,11 +8563,12 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       if(price===null)unknown=true;else subtotal+=Math.round(price*Number(item.qty)*100)/100;
     });
     const discount=hasQueenaCoupon() && subtotal>=500 ? 30 : 0;
-    const fee=form.elements.shipping.value==='宅配' ? null : 40;
+    const home=form.elements.shipping.value==='宅配';
+    const fee=home ? 0 : 40;
     function moneyRow(label,value,total){return '<div class="checkoutMoneyRow'+(total?' total':'')+'"><span>'+label+'</span><strong>'+value+'</strong></div>';}
     box.innerHTML=moneyRow('商品小計',formatQueenaMoney_(subtotal)+(unknown?'＋待確認':''),false)+
       (discount?moneyRow('購物券','−'+formatQueenaMoney_(discount),false):'')+
-      (fee===null?'<div class="checkoutMoneyNote">宅配運費待 Queena 確認</div>':moneyRow('超商運費','$40',false)+moneyRow(unknown?'目前金額（含運）':'合計（含運）',formatQueenaMoney_(subtotal-discount+fee),true))+
+      moneyRow(home?'宅配運費':'超商運費',home?'免運':formatQueenaMoney_(fee),false)+moneyRow(unknown?'目前金額（含運）':'合計（含運）',unknown?'待確認':formatQueenaMoney_(subtotal-discount+fee),true)+
       (unknown?'<div class="checkoutMoneyNote">優惠商品金額將由 Queena 確認。</div>':'');
   }
 
@@ -8641,7 +8642,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       if(!data.saved || !data.orderId) throw new Error('尚未取得訂單儲存確認，請先向 Queena 查詢');
       const receiptLines=['✅ 訂單已建立',data.orderId,'','商品小計：$'+Number(data.subtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認商品':'')];
       if(data.discount)receiptLines.push('購物券：−$'+data.discount);
-      receiptLines.push(data.shippingFee===null?'宅配運費待 Queena 確認':'超商運費：$'+data.shippingFee);
+      receiptLines.push(payload.shipping==='宅配'?'宅配運費：免運':'超商運費：$'+data.shippingFee);
       if(typeof data.totalAmount==='number')receiptLines.push('合計（含運）：$'+Number(data.totalAmount).toLocaleString('zh-TW'));
       receiptLines.push('',payload.shipping+'｜'+payload.payment,payload.payment==='LINE Pay'?'請加 Queena LINE 並傳送訂單編號，Queena 會私訊付款方式。':'請將訂單編號傳給 Queena，方便確認。');
       if(data.notification && !data.notification.accepted)receiptLines.push('訂單已存入試算表，請主動傳送訂單編號。');
@@ -8651,15 +8652,17 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       transferForm.hidden=payload.payment!=='銀行轉帳';
       bankInfo.hidden=true;bankInfo.textContent='';if(countdownTimer)clearInterval(countdownTimer);
       if(payload.payment==='銀行轉帳'){
-        if(typeof data.totalAmount!=='number'){
-          bankInfo.hidden=false;bankInfo.textContent='宅配運費或優惠金額確認後再匯款，請先透過 LINE 聯絡 Queena。';
-        }else if(data.bankTransfer && data.paymentDueAt){
+        if(data.bankTransfer){
           const bank=data.bankTransfer,deadline=new Date(data.paymentDueAt).getTime();
           const heading=document.createElement('strong');heading.textContent='匯款資料';bankInfo.appendChild(heading);
-          [['銀行',bank.bankName],['戶名',bank.accountName],['帳號',bank.accountNumber],['應付金額','$'+Number(data.totalAmount).toLocaleString('zh-TW')]].forEach(function(pair){const row=document.createElement('div');row.textContent=pair[0]+'：'+pair[1];bankInfo.appendChild(row);});
-          const timer=document.createElement('div');timer.id='paymentCountdown';timer.setAttribute('role','timer');bankInfo.appendChild(timer);bankInfo.hidden=false;
-          function updateCountdown(){const left=Math.max(0,deadline-Date.now());if(left===0){timer.textContent='30 分鐘匯款時間已到；逾時匯款請先聯絡 Queena 人工確認。';clearInterval(countdownTimer);return;}const mins=Math.floor(left/60000),secs=Math.floor(left%60000/1000);timer.textContent='請於 '+String(mins).padStart(2,'0')+':'+String(secs).padStart(2,'0')+' 內完成匯款';}
-          updateCountdown();countdownTimer=setInterval(updateCountdown,1000);
+          [['銀行',bank.bankName],['戶名',bank.accountName],['帳號',bank.accountNumber],['應付金額',typeof data.totalAmount==='number'?'$'+Number(data.totalAmount).toLocaleString('zh-TW'):'待 Queena 確認']].forEach(function(pair){const row=document.createElement('div');row.textContent=pair[0]+'：'+pair[1];bankInfo.appendChild(row);});
+          if(typeof data.totalAmount==='number' && data.paymentDueAt){
+            const timer=document.createElement('div');timer.id='paymentCountdown';timer.setAttribute('role','timer');bankInfo.appendChild(timer);bankInfo.hidden=false;
+            function updateCountdown(){const left=Math.max(0,deadline-Date.now());if(left===0){timer.textContent='30 分鐘匯款時間已到；逾時匯款請先聯絡 Queena 人工確認。';clearInterval(countdownTimer);return;}const mins=Math.floor(left/60000),secs=Math.floor(left%60000/1000);timer.textContent='請於 '+String(mins).padStart(2,'0')+':'+String(secs).padStart(2,'0')+' 內完成匯款';}
+            updateCountdown();countdownTimer=setInterval(updateCountdown,1000);
+          }else{
+            const note=document.createElement('div');note.textContent='商品優惠金額確認後再匯款，確認後再開始計算付款時間。宅配免運。';bankInfo.appendChild(note);bankInfo.hidden=false;
+          }
         }else{bankInfo.hidden=false;bankInfo.textContent='匯款資料尚未設定，請先加 LINE 聯絡 Queena。';}
       }
       transferForm.reset();transferForm.elements.lastFive.disabled=false;
