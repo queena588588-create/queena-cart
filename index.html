@@ -8537,4 +8537,61 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   syncReceiver();
   toggleFields();
   function setCheckoutView(open){
-    form.hidden=!open;messageBox.hidden=
+    form.hidden=!open;messageBox.hidden=open;cartItems.hidden=open;sendBtn.hidden=open;clearButton.hidden=open;
+    const prompt=document.getElementById('lineFriendPrompt');if(prompt)prompt.hidden=open;
+    document.getElementById('openCheckout').textContent=open?'← 返回商品清單':'🛒 直接結帳';
+  }
+  document.getElementById('openCheckout').addEventListener('click',function(){
+    const items = Object.values(cart || {});
+    if(!items.length){ alert('請先加入商品');return; }
+    setCheckoutView(form.hidden);
+    document.getElementById('checkoutSummary').innerHTML = createMessage(false);refreshShippingSummary();
+    if(!form.hidden) form.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  panel.addEventListener('change',function(){if(!form.hidden){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshShippingSummary();}});
+  panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshShippingSummary();},0);});
+  form.addEventListener('submit',async function(event){
+    event.preventDefault();
+    syncReceiver();
+    if(inFlight || queenaOrderInFlight) return;
+    if(!form.reportValidity()){result.textContent='訂單尚未送出，請完成標示的必填欄位。';return;}
+    const items = Object.values(cart || {}).map(function(i){return {name:i.name,spec:i.spec || '',qty:Number(i.qty)};});
+    if(!items.length){ alert('請先加入商品');return; }
+    if(!products.length){ alert('商品資料尚未完成載入，請稍候再試');return; }
+    const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || (getProductSpecs(p).length && !getProductSpecs(p).includes(i.spec));});
+    if(missing){ alert('請先確認「'+missing.name+'」的規格');renderCartPanel();return; }
+    const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
+    ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeArea','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
+    if(payload.shipping==='宅配'){payload.storeName='';payload.storeArea='';}else{payload.address='';}
+    payload.sameReceiver=form.elements.sameReceiver.checked;
+    payload.contactMethod=payload.lineId ? 'lineId' : 'phone';
+    const fingerprint = JSON.stringify(payload);
+    if(!requestId || fingerprint !== lastPayload){
+      requestId = (window.crypto && typeof window.crypto.randomUUID==='function') ? window.crypto.randomUUID() : 'checkout-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+      lastPayload = fingerprint;
+    }
+    payload.requestId = requestId;
+    inFlight=true;queenaOrderInFlight=true;sendBtn.disabled=true; submit.disabled=true;submit.textContent='正在建立訂單…';result.textContent='';
+    try{
+      const data=await apiPost('checkout',payload);
+      if(!data.saved || !data.orderId) throw new Error('尚未取得訂單儲存確認，請先向 Queena 查詢');
+      const receiptLines=['✅ 訂單已建立',data.orderId,'','商品小計：$'+Number(data.subtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認商品':'')];
+      if(data.discount)receiptLines.push('購物券：−$'+data.discount);
+      receiptLines.push(data.shippingFee===null?'宅配運費待 Queena 確認':'超商運費：$'+data.shippingFee);
+      if(typeof data.totalAmount==='number')receiptLines.push('合計（含運）：$'+Number(data.totalAmount).toLocaleString('zh-TW'));
+      receiptLines.push('',payload.shipping+'｜'+payload.payment,'請將訂單編號傳給 Queena，方便確認。');
+      if(data.notification && !data.notification.accepted)receiptLines.push('訂單已存入試算表，請主動傳送訂單編號。');
+      result.textContent=receiptLines.join('\n');
+      const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);
+      cart={};queenaLocalStorage.removeItem('queenaPendingCart');queenaLocalStorage.removeItem('queenaPendingSend');queenaSessionStorage.removeItem('queenaPendingCartBackup');queenaSessionStorage.removeItem('queenaPendingSendBackup');
+      queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
+      form.reset();toggleFields();syncReceiver();setCheckoutView(false);requestId='';lastPayload='';
+      result.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }catch(err){result.textContent='未取得完成確認：'+err.message+'\n若結果不明，請先向 Queena 查詢，避免重新建立另一筆訂單。';}
+    finally{inFlight=false;queenaOrderInFlight=false;sendBtn.disabled=false;submit.disabled=false;submit.textContent='確認資料並送出訂單';}
+  });
+})();
+
+</script>
+</body>
+</html>
