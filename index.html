@@ -28,17 +28,17 @@
     window.queenaSessionStorage = safeStorage('sessionStorage');
   })();
   </script>
- <title>♕ QUEENA SELECT｜好物商城</title>
+ <title>♕ 塞爆你專屬購物車｜QUEENA SELECT</title>
  <meta name="description" content="Queena 的生活選物｜新品・熱銷・高回購愛用品 ♡">
   <!-- QUEENA_DYNAMIC_OG_START -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Queena SELECT">
-  <meta property="og:title" content="♕ QUEENA SELECT｜好物商城">
+  <meta property="og:title" content="♕ 塞爆你專屬購物車｜QUEENA SELECT">
  <meta property="og:description" content="Queena 的生活選物｜新品・熱銷・高回購愛用品 ♡">
   <meta property="og:url" content="https://queena-cart.pages.dev/">
   <meta property="og:image" content="https://queena-cart.pages.dev/queena-share.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="♕ QUEENA SELECT｜好物商城">
+  <meta name="twitter:title" content="♕ 塞爆你專屬購物車｜QUEENA SELECT">
   <meta name="twitter:description" content="Queena 的生活選物｜新品・熱銷・高回購愛用品 ♡">
   <meta name="twitter:image" content="https://queena-cart.pages.dev/queena-share.png">
   <link rel="canonical" href="https://queena-cart.pages.dev/">
@@ -4405,7 +4405,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
   <header class="mHeader">
     <div class="mHeaderTop">
       <div>
-        <div class="mBrand">👑 塞爆你的購物車 ♡</div>
+        <div class="mBrand">👑 塞爆你專屬購物車 ♡</div>
         <div class="mUpdate">手機商城版｜最後更新：<span id="mUpdateDate"></span></div>
       </div>
       <button type="button" id="mSearchIcon" class="mIconBtn" aria-label="搜尋">⌕</button>
@@ -4420,7 +4420,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
   <main class="mMain">
 
     <section class="mHero">
-      <img id="mHeroImage" alt="塞爆你的購物車">
+      <img id="mHeroImage" alt="塞爆你專屬購物車">
       <div class="mHeroShade"></div>
       <div class="mHeroText">
         <div class="mHeroTitle">QUEENA SELECT</div>
@@ -4589,7 +4589,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
     </div>
 
     <div class="heroVisual heroStoreVisual" id="heroVisual">
-      <img class="heroStoreImage" src="queena-store-hero.jpg" alt="塞爆你的購物車">
+      <img class="heroStoreImage" src="queena-store-hero.png" alt="塞爆你專屬購物車">
     </div>
   </section>
 
@@ -4737,7 +4737,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
     </div>
 
     <button id="sendBtn" class="actionBtn lineBtn">
-      LINE 確認訂單
+      LINE 人工確認訂單
     </button>
 
     <div id="lineFriendPrompt" class="lineFriendPrompt" style="display:none;"></div>
@@ -4906,7 +4906,7 @@ async function queenaFetchTimed_(url, options){
     const text=await response.text();
     return {ok:response.ok,status:response.status,text:async function(){return text;}};
   }catch(err){
-    if(err.name==='AbortError') throw new Error(options.method==='POST' ? '送單等待逾時，結果尚未確認；請先向 Queena 查詢' : '連線等待逾時，請再試一次或使用直接結帳');
+    if(err.name==='AbortError') throw new Error(options.method==='POST' ? '送單等待逾時，結果尚未確認；請先向 Queena 查詢' : '連線等待逾時，請再試一次或使用自助快速結帳');
     throw err;
   }finally{clearTimeout(timeout);}
 }
@@ -6272,7 +6272,7 @@ function startFullLineLogin_(items){
       const box=document.getElementById('lineFriendPrompt');
       if(box){box.innerHTML='';const a=document.createElement('a');a.href=loginUrl.href;a.textContent='💚 點此繼續 LINE 身分確認';a.className='lineFriendAddBtn';box.appendChild(a);box.style.display='block';}
       sendBtn.disabled=false;
-      sendBtn.textContent='LINE 確認訂單';
+      sendBtn.textContent='LINE 人工確認訂單';
       window.location.assign(loginUrl.href);
 
     })
@@ -6280,10 +6280,10 @@ function startFullLineLogin_(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 確認訂單';
+        'LINE 人工確認訂單';
 
       alert(
-        'LINE 確認暫時未完成：' + (err.message || String(err)) + '\n也可以選擇下方「直接結帳」。'
+        'LINE 確認暫時未完成：' + (err.message || String(err)) + '\n也可以選擇下方「自助快速結帳」。'
       );
 
     });
@@ -6377,7 +6377,7 @@ function submitWishlist(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 確認訂單';
+        'LINE 人工確認訂單';
 
       alert('清單已存入試算表。'+(data.notification && !data.notification.accepted ? 'LINE 自動通知尚未成功，請主動聯絡 Queena。':'請開啟下方 LINE 聯絡 Queena 確認訂單。'));
       showLineContactPrompt_();
@@ -6431,7 +6431,7 @@ function submitWishlist(items){
       if(/身分.*失效|重新確認/.test(String(err.message || ''))){lineProfile=null;queenaLocalStorage.removeItem('queenaLineRememberToken');}
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 確認訂單';
+        'LINE 人工確認訂單';
 
       alert(
         '送出失敗：' +
@@ -6456,7 +6456,7 @@ function handleLineOrderReceipt_(profile){
   queenaLocalStorage.removeItem('queenaPendingSend');
   queenaSessionStorage.removeItem('queenaPendingSendBackup');
   pendingSubmitInFlight=false;wishlistSubmitting=false;queenaOrderInFlight=false;
-  sendBtn.disabled=false;sendBtn.textContent='LINE 確認訂單';
+  sendBtn.disabled=false;sendBtn.textContent='LINE 人工確認訂單';
   if(receipt.saved){
     ['queenaPendingCart','queenaWishlistRequestId','queenaWishlistFingerprint'].forEach(function(k){queenaLocalStorage.removeItem(k);});
     queenaSessionStorage.removeItem('queenaPendingCartBackup');
@@ -8406,7 +8406,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   if(!panel || !clearButton) return;
   const wrap = document.createElement('section');
   wrap.id = 'checkoutSection';
-  wrap.innerHTML = `<button type="button" id="openCheckout" class="actionBtn" style="background:#725b4c;color:white">🛒 直接結帳</button>
+  wrap.innerHTML = `<button type="button" id="openCheckout" class="actionBtn" style="background:#725b4c;color:white">🛒 自助快速結帳</button>
   <form id="checkoutForm" novalidate hidden>
     <header class="checkoutIntro"><h3>填寫訂單資料</h3><p>填好資料，Queena 會再與你確認。</p></header>
     <fieldset class="checkoutCard"><legend><span>01</span> 聯絡資料</legend>
@@ -8446,7 +8446,16 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     </fieldset>
     <label class="checkoutCheck checkoutConsent"><input name="consent" type="checkbox" required><span>同意上述資料用於本次訂單聯絡與配送。</span></label>
     <button type="submit" id="checkoutSubmit" class="actionBtn">確認並送出訂單</button>
-  </form><div id="checkoutResult" role="status" aria-live="polite" style="white-space:pre-wrap;text-align:left"></div>`;
+  </form><div id="checkoutResult" role="status" aria-live="polite" style="white-space:pre-wrap;text-align:left"></div>
+  <section id="checkoutReceiptActions" hidden aria-label="訂單後續操作">
+    <button type="button" id="copyOrderId" class="checkoutActionBtn">📋 複製訂單編號</button>
+    <div id="bankTransferInfo" hidden aria-live="polite"></div>
+    <form id="transferReportForm" hidden>
+      <label>匯款後填寫帳號末五碼<input name="lastFive" type="text" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="off" placeholder="5 個數字" required></label>
+      <button type="submit" id="transferReportSubmit" class="checkoutActionBtn primary">我已轉帳</button>
+    </form>
+    <p id="transferReportStatus" role="status" aria-live="polite"></p>
+  </section>`;
   panel.insertBefore(wrap, clearButton);
   const style = document.createElement('style');
   style.textContent = `#checkoutForm{padding:24px 0 8px;text-align:left;color:#51443d;line-height:1.6}
@@ -8488,6 +8497,14 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
 #checkoutForm .checkoutSrOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 #checkoutResult{padding:20px;margin:22px 0;border:1px solid #e7ddd3;border-radius:16px;background:#fffdf9;line-height:1.9;overflow-wrap:anywhere;text-align:left}
 #checkoutResult:empty{display:none}
+#checkoutReceiptActions{display:grid;gap:12px;margin:0 0 18px}
+#checkoutReceiptActions[hidden],#transferReportForm[hidden]{display:none!important}
+#checkoutReceiptActions .checkoutActionBtn{width:100%;min-height:46px;border:1px solid #d9c7bc;border-radius:10px;background:#fff;color:#70584c;font:inherit;font-size:15px;font-weight:600}
+#checkoutReceiptActions .checkoutActionBtn.primary{border-color:#84695c;background:#84695c;color:#fff}
+#checkoutReceiptActions p{margin:0;font-size:14px;color:#70584c}
+#bankTransferInfo{padding:14px;border:1px solid #eadfd8;border-radius:12px;background:#fffaf5;color:#604c40;line-height:1.8;font-size:14px}
+#bankTransferInfo[hidden]{display:none!important}
+#checkoutReceiptActions label{margin:0 0 10px}
 #overlay .cartPanel:has(#checkoutForm:not([hidden])){max-height:92dvh;max-height:min(92dvh,100%);padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 @media(min-width:600px){#checkoutForm .checkoutGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 @media(max-width:420px){#checkoutForm{padding-top:16px}#checkoutForm .checkoutIntro{margin-bottom:18px}#checkoutForm .checkoutCard{padding:14px 14px 17px;margin-bottom:14px}#checkoutForm h3{font-size:22px}#checkoutForm label{margin-bottom:13px}#checkoutForm .checkoutCheck{margin:14px 0;padding:11px 12px}}
@@ -8496,6 +8513,32 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   const form = document.getElementById('checkoutForm');
   const result = document.getElementById('checkoutResult');
   const submit = document.getElementById('checkoutSubmit');
+  const receiptActions=document.getElementById('checkoutReceiptActions');
+  const transferForm=document.getElementById('transferReportForm');
+  const bankInfo=document.getElementById('bankTransferInfo');
+  let countdownTimer=0;
+  let completedOrderId='',completedBuyerPhone='';
+  document.getElementById('copyOrderId').addEventListener('click',async function(){
+    if(!completedOrderId)return;
+    let copied=false;
+    try{await navigator.clipboard.writeText(completedOrderId);copied=true;}catch(_){
+      const temp=document.createElement('textarea');temp.value=completedOrderId;temp.setAttribute('readonly','');temp.style.position='fixed';temp.style.opacity='0';document.body.appendChild(temp);temp.select();
+      try{copied=document.execCommand('copy');}catch(__){}temp.remove();
+    }
+    this.textContent=copied?'✅ 已複製訂單編號':'請長按訂單編號複製';
+  });
+  transferForm.addEventListener('submit',async function(event){
+    event.preventDefault();
+    const input=transferForm.elements.lastFive,button=document.getElementById('transferReportSubmit'),status=document.getElementById('transferReportStatus');
+    if(!input.reportValidity())return;
+    if(button.disabled)return;
+    button.disabled=true;button.textContent='正在送出回報…';status.textContent='';
+    try{
+      const data=await apiPost('transferReport',{orderId:completedOrderId,buyerPhone:completedBuyerPhone,lastFive:input.value.trim()});
+      status.textContent=data.message || '已收到轉帳回報，款項仍待 Queena 核帳。';
+      input.disabled=true;button.textContent='✅ 已送出轉帳回報';
+    }catch(err){status.textContent='回報未送出：'+err.message;button.disabled=false;button.textContent='我已轉帳';}
+  });
   let inFlight = false, requestId = '', lastPayload = '';
   function toggleFields(){
     const home = form.elements.shipping.value === '宅配';
@@ -8545,7 +8588,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   function setCheckoutView(open){
     form.hidden=!open;messageBox.hidden=open;cartItems.hidden=open;sendBtn.hidden=open;clearButton.hidden=open;
     const prompt=document.getElementById('lineFriendPrompt');if(prompt)prompt.hidden=open;
-    document.getElementById('openCheckout').textContent=open?'← 返回商品清單':'🛒 直接結帳';
+    document.getElementById('openCheckout').textContent=open?'← 返回商品清單':'🛒 自助快速結帳';
   }
   document.getElementById('editCartFromCheckout').addEventListener('click',function(){
     setCheckoutView(false);
@@ -8592,7 +8635,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       lastPayload = fingerprint;
     }
     payload.requestId = requestId;
-    inFlight=true;queenaOrderInFlight=true;sendBtn.disabled=true; submit.disabled=true;submit.textContent='正在建立訂單…';result.textContent='';
+    inFlight=true;queenaOrderInFlight=true;sendBtn.disabled=true; submit.disabled=true;submit.textContent='正在建立訂單…';result.textContent='';receiptActions.hidden=true;
     try{
       const data=await apiPost('checkout',payload);
       if(!data.saved || !data.orderId) throw new Error('尚未取得訂單儲存確認，請先向 Queena 查詢');
@@ -8600,9 +8643,29 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       if(data.discount)receiptLines.push('購物券：−$'+data.discount);
       receiptLines.push(data.shippingFee===null?'宅配運費待 Queena 確認':'超商運費：$'+data.shippingFee);
       if(typeof data.totalAmount==='number')receiptLines.push('合計（含運）：$'+Number(data.totalAmount).toLocaleString('zh-TW'));
-      receiptLines.push('',payload.shipping+'｜'+payload.payment,'請將訂單編號傳給 Queena，方便確認。');
+      receiptLines.push('',payload.shipping+'｜'+payload.payment,payload.payment==='LINE Pay'?'請加 Queena LINE 並傳送訂單編號，Queena 會私訊付款方式。':'請將訂單編號傳給 Queena，方便確認。');
       if(data.notification && !data.notification.accepted)receiptLines.push('訂單已存入試算表，請主動傳送訂單編號。');
       result.textContent=receiptLines.join('\n');
+      completedOrderId=data.orderId;completedBuyerPhone=payload.buyerPhone;
+      receiptActions.hidden=false;
+      transferForm.hidden=payload.payment!=='銀行轉帳';
+      bankInfo.hidden=true;bankInfo.textContent='';if(countdownTimer)clearInterval(countdownTimer);
+      if(payload.payment==='銀行轉帳'){
+        if(typeof data.totalAmount!=='number'){
+          bankInfo.hidden=false;bankInfo.textContent='宅配運費或優惠金額確認後再匯款，請先透過 LINE 聯絡 Queena。';
+        }else if(data.bankTransfer && data.paymentDueAt){
+          const bank=data.bankTransfer,deadline=new Date(data.paymentDueAt).getTime();
+          const heading=document.createElement('strong');heading.textContent='匯款資料';bankInfo.appendChild(heading);
+          [['銀行',bank.bankName],['戶名',bank.accountName],['帳號',bank.accountNumber],['應付金額','$'+Number(data.totalAmount).toLocaleString('zh-TW')]].forEach(function(pair){const row=document.createElement('div');row.textContent=pair[0]+'：'+pair[1];bankInfo.appendChild(row);});
+          const timer=document.createElement('div');timer.id='paymentCountdown';timer.setAttribute('role','timer');bankInfo.appendChild(timer);bankInfo.hidden=false;
+          function updateCountdown(){const left=Math.max(0,deadline-Date.now());if(left===0){timer.textContent='30 分鐘匯款時間已到；逾時匯款請先聯絡 Queena 人工確認。';clearInterval(countdownTimer);return;}const mins=Math.floor(left/60000),secs=Math.floor(left%60000/1000);timer.textContent='請於 '+String(mins).padStart(2,'0')+':'+String(secs).padStart(2,'0')+' 內完成匯款';}
+          updateCountdown();countdownTimer=setInterval(updateCountdown,1000);
+        }else{bankInfo.hidden=false;bankInfo.textContent='匯款資料尚未設定，請先加 LINE 聯絡 Queena。';}
+      }
+      transferForm.reset();transferForm.elements.lastFive.disabled=false;
+      const reportButton=document.getElementById('transferReportSubmit');reportButton.disabled=false;reportButton.textContent='我已轉帳';
+      document.getElementById('transferReportStatus').textContent=payload.payment==='銀行轉帳'?(typeof data.totalAmount==='number'?'匯款後填寫末五碼；訂單維持待人工核帳，逾時也請回報並聯絡 Queena。':'請先等 Queena 確認最終應付金額，再匯款並填寫末五碼。'):payload.payment==='LINE Pay'?'請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。':'';
+      document.getElementById('copyOrderId').textContent='📋 複製訂單編號';
       const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);
       cart={};queenaLocalStorage.removeItem('queenaPendingCart');queenaLocalStorage.removeItem('queenaPendingSend');queenaSessionStorage.removeItem('queenaPendingCartBackup');queenaSessionStorage.removeItem('queenaPendingSendBackup');
       queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
