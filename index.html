@@ -8438,7 +8438,10 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       <label>備註（選填）<textarea name="note" maxlength="500" rows="2" placeholder="有其他需求可填在這裡"></textarea></label>
     </fieldset>
     <fieldset class="checkoutCard checkoutReview"><legend><span>04</span> 訂單確認</legend>
+      <p class="checkoutReviewHint">請核對商品、規格和數量；需要修改時可返回清單。</p>
+      <div id="checkoutSpecWarning" role="status" aria-live="polite" hidden></div>
       <div id="checkoutSummary"></div>
+      <button type="button" id="editCartFromCheckout" class="checkoutEditCart">← 返回商品清單修改規格／數量</button>
       <div id="checkoutShippingSummary" aria-live="polite"></div>
     </fieldset>
     <label class="checkoutCheck checkoutConsent"><input name="consent" type="checkbox" required><span>同意上述資料用於本次訂單聯絡與配送。</span></label>
@@ -8467,6 +8470,9 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
 #checkoutForm .checkoutHint{margin:10px 0 24px}
 #checkoutForm .checkoutNoHeading{margin-bottom:0}
 #checkoutForm .checkoutReview{background:#fffaf5}
+#checkoutForm .checkoutReviewHint{margin:2px 0 16px;color:#8b7870}
+#checkoutForm .checkoutEditCart{width:100%;min-height:44px;margin:18px 0 0;padding:10px 12px;border:1px solid #d9c7bc;border-radius:10px;background:#fff;color:#70584c;font:inherit;font-size:14px;font-weight:600}
+#checkoutForm #checkoutSpecWarning:not([hidden]){margin:0 0 14px;padding:11px 13px;border-radius:10px;background:#fff0df;color:#89552e;font-size:14px;line-height:1.55}
 #checkoutForm #checkoutSummary .orderConfirmBox{border:0;border-radius:0;background:transparent;padding:0;margin:0;box-shadow:none}
 #checkoutForm #checkoutSummary .orderConfirmTitle,#checkoutForm #checkoutSummary .orderConfirmAfter{display:none}
 #checkoutForm #checkoutSummary .orderConfirmProduct{overflow-wrap:anywhere}
@@ -8484,7 +8490,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
 #checkoutResult:empty{display:none}
 #overlay .cartPanel:has(#checkoutForm:not([hidden])){max-height:92dvh;max-height:min(92dvh,100%);padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 @media(min-width:600px){#checkoutForm .checkoutGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
-@media(max-width:420px){#checkoutForm .checkoutCard{padding:16px 15px 20px;margin-bottom:24px}#checkoutForm h3{font-size:22px}}
+@media(max-width:420px){#checkoutForm{padding-top:16px}#checkoutForm .checkoutIntro{margin-bottom:18px}#checkoutForm .checkoutCard{padding:14px 14px 17px;margin-bottom:14px}#checkoutForm h3{font-size:22px}#checkoutForm label{margin-bottom:13px}#checkoutForm .checkoutCheck{margin:14px 0;padding:11px 12px}}
 `;
   document.head.appendChild(style);
   const form = document.getElementById('checkoutForm');
@@ -8541,15 +8547,30 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     const prompt=document.getElementById('lineFriendPrompt');if(prompt)prompt.hidden=open;
     document.getElementById('openCheckout').textContent=open?'← 返回商品清單':'🛒 直接結帳';
   }
+  document.getElementById('editCartFromCheckout').addEventListener('click',function(){
+    setCheckoutView(false);
+    renderCartPanel();
+    cartItems.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  function refreshCheckoutSpecWarning(){
+    const warning=document.getElementById('checkoutSpecWarning');
+    if(!warning)return;
+    const missing=Object.values(cart || {}).filter(function(item){
+      const product=products.find(function(p){return p.name===item.name;});
+      return product && getProductSpecs(product).length && !String(item.spec || '').trim();
+    });
+    warning.hidden=!missing.length;
+    warning.textContent=missing.length?'尚有商品未選規格：'+missing.map(function(item){return item.name;}).join('、')+'。請返回商品清單選擇後再送出。':'';
+  }
   document.getElementById('openCheckout').addEventListener('click',function(){
     const items = Object.values(cart || {});
     if(!items.length){ alert('請先加入商品');return; }
     setCheckoutView(form.hidden);
-    document.getElementById('checkoutSummary').innerHTML = createMessage(false);refreshShippingSummary();
+    document.getElementById('checkoutSummary').innerHTML = createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();
     if(!form.hidden) form.scrollIntoView({behavior:'smooth',block:'start'});
   });
-  panel.addEventListener('change',function(){if(!form.hidden){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshShippingSummary();}});
-  panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshShippingSummary();},0);});
+  panel.addEventListener('change',function(){if(!form.hidden){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();}});
+  panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();},0);});
   form.addEventListener('submit',async function(event){
     event.preventDefault();
     syncReceiver();
@@ -8559,7 +8580,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     if(!items.length){ alert('請先加入商品');return; }
     if(!products.length){ alert('商品資料尚未完成載入，請稍候再試');return; }
     const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || (getProductSpecs(p).length && !getProductSpecs(p).includes(i.spec));});
-    if(missing){ alert('請先確認「'+missing.name+'」的規格');renderCartPanel();return; }
+    if(missing){ alert('請先確認「'+missing.name+'」的規格');setCheckoutView(false);renderCartPanel();cartItems.scrollIntoView({behavior:'smooth',block:'start'});return; }
     const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
     ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeArea','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
     if(payload.shipping==='宅配'){payload.storeName='';payload.storeArea='';}else{payload.address='';}
