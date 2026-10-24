@@ -8407,33 +8407,85 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   const wrap = document.createElement('section');
   wrap.id = 'checkoutSection';
   wrap.innerHTML = `<button type="button" id="openCheckout" class="actionBtn" style="background:#725b4c;color:white">🛒 直接結帳</button>
-  <form id="checkoutForm" novalidate hidden style="text-align:left;padding:16px 0">
-    <h3>收件與付款資料</h3>
-    <p>不必登入 LINE。送出後會建立待確認訂單，Queena 會核對商品、運費與總額。</p>
-    <label>訂購人姓名<input name="buyerName" required maxlength="40" autocomplete="name"></label>
-    <label>訂購人手機<input name="buyerPhone" required type="tel" inputmode="tel" pattern="09[0-9]{8}" placeholder="09 開頭，共 10 碼" autocomplete="tel"></label>
-    <label style="display:flex;gap:8px;align-items:center"><input name="sameReceiver" type="checkbox" checked style="width:auto">收件人同訂購人</label>
-    <label>收件人姓名<input name="receiver" required maxlength="40" autocomplete="shipping name"></label>
-    <label>手機號碼<input name="phone" required type="tel" inputmode="tel" pattern="09[0-9]{8}" placeholder="09 開頭，共 10 碼" autocomplete="shipping tel"></label>
-    <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option></select></label>
-    <div id="homeFields"><label>收件地址<input name="address" required maxlength="180" autocomplete="shipping street-address"></label></div>
-    <div id="storeFields" hidden><p>請填寫確定可取貨的門市；實際寄件服務由 Queena 確認。</p><label>門市名稱<input name="storeName" maxlength="60" placeholder="例如：○○門市"></label><label>縣市／區<input name="storeArea" maxlength="60" placeholder="例如：新北市／板橋區"></label></div>
-    <label>付款方式<select name="payment"><option value="銀行轉帳">銀行轉帳</option><option value="LINE Pay">LINE Pay</option><option value="貨到付款">貨到付款</option></select></label>
-    <p>轉帳／LINE Pay 付款資訊由 Queena 透過 LINE 提供。</p>
-    <label>LINE ID（選填）<input name="lineId" maxlength="60" placeholder="不知道可以留白，Queena 可用電話聯絡你"></label>
-    <label>LINE 顯示名稱（選填）<input name="lineName" maxlength="60" placeholder="方便 Queena 對照你的訊息"></label>
-    <p>不知道 LINE ID 也能下單。你可以主動加 Queena 好友並傳送訂單編號，或由 Queena 用訂購人電話聯絡你。</p>
-    <a class="checkoutLineLink" href="https://line.me/ti/p/aZ1M8UpSkD" target="_blank" rel="noopener noreferrer">💚 加 Queena LINE 好友</a>
-    <label>備註<textarea name="note" maxlength="500" rows="2"></textarea></label>
-    <div id="checkoutSummary" class="messageBox"></div>
-    <div id="checkoutShippingSummary" class="messageBox" aria-live="polite"></div>
-    
-    <label style="display:flex;gap:8px;align-items:flex-start"><input name="consent" type="checkbox" required style="width:auto;margin-top:4px">我同意提供上述資料，供 Queena 聯絡、處理本次訂單與配送使用。</label>
-    <button type="submit" id="checkoutSubmit" class="actionBtn" style="background:#725b4c;color:white">確認資料並送出訂單</button>
+  <form id="checkoutForm" novalidate hidden>
+    <header class="checkoutIntro"><h3>填寫訂單資料</h3><p>填好資料，Queena 會再與你確認。</p></header>
+    <fieldset class="checkoutCard"><legend><span>01</span> 聯絡資料</legend>
+      <div class="checkoutGrid">
+        <label>訂購人姓名<input name="buyerName" required maxlength="40" autocomplete="name" placeholder="請填姓名"></label>
+        <label>訂購人手機<input name="buyerPhone" required type="tel" inputmode="tel" pattern="09[0-9]{8}" placeholder="09 開頭，共 10 碼" autocomplete="tel"></label>
+      </div>
+      <details class="checkoutOptional"><summary>補充 LINE 資料（選填）</summary>
+        <div class="checkoutGrid"><label>LINE ID<input name="lineId" maxlength="60" placeholder="不知道可以留白"></label><label>LINE 顯示名稱<input name="lineName" maxlength="60" placeholder="你在 LINE 使用的名稱"></label></div>
+      </details>
+      <a class="checkoutLineLink" href="https://line.me/ti/p/aZ1M8UpSkD" target="_blank" rel="noopener noreferrer">加 Queena LINE 好友 ↗</a>
+    </fieldset>
+    <fieldset class="checkoutCard"><legend><span>02</span> 收件配送</legend>
+      <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option></select></label>
+      <label class="checkoutCheck"><input name="sameReceiver" type="checkbox" checked>收件人同訂購人</label>
+      <div id="receiverFields" class="checkoutGrid" hidden>
+        <label>收件人姓名<input name="receiver" required maxlength="40" autocomplete="shipping name" placeholder="請填收件人姓名"></label>
+        <label>收件人手機<input name="phone" required type="tel" inputmode="tel" pattern="09[0-9]{8}" placeholder="09 開頭，共 10 碼" autocomplete="shipping tel"></label>
+      </div>
+      <div id="homeFields"><label>收件地址<input name="address" required maxlength="180" autocomplete="shipping street-address" placeholder="縣市、區、路名與門牌"></label></div>
+      <div id="storeFields" class="checkoutGrid" hidden>
+        <label>縣市／區<input name="storeArea" maxlength="60" placeholder="例如：台中市／大雅區"></label>
+        <label>門市名稱<input name="storeName" maxlength="60" placeholder="例如：上楓門市"></label>
+      </div>
+    </fieldset>
+    <fieldset class="checkoutCard"><legend><span>03</span> 付款方式</legend>
+      <label class="checkoutNoHeading"><span class="checkoutSrOnly">付款方式</span><select name="payment"><option value="銀行轉帳">銀行轉帳</option><option value="LINE Pay">LINE Pay</option><option value="貨到付款">貨到付款</option></select></label>
+      <p id="checkoutPaymentHint" class="checkoutHint">付款資訊由 Queena 透過 LINE 提供。</p>
+      <label>備註（選填）<textarea name="note" maxlength="500" rows="2" placeholder="有其他需求可填在這裡"></textarea></label>
+    </fieldset>
+    <fieldset class="checkoutCard checkoutReview"><legend><span>04</span> 訂單確認</legend>
+      <div id="checkoutSummary"></div>
+      <div id="checkoutShippingSummary" aria-live="polite"></div>
+    </fieldset>
+    <label class="checkoutCheck checkoutConsent"><input name="consent" type="checkbox" required><span>同意上述資料用於本次訂單聯絡與配送。</span></label>
+    <button type="submit" id="checkoutSubmit" class="actionBtn">確認並送出訂單</button>
   </form><div id="checkoutResult" role="status" aria-live="polite" style="white-space:pre-wrap;text-align:left"></div>`;
   panel.insertBefore(wrap, clearButton);
   const style = document.createElement('style');
-  style.textContent = '#checkoutForm label{display:block;margin:12px 0;color:#4b3517}#checkoutForm input:not([type=checkbox]),#checkoutForm select,#checkoutForm textarea{display:block;width:100%;box-sizing:border-box;padding:12px;margin-top:5px;border:1px solid #d9cbbf;border-radius:10px;font:inherit;background:white}#checkoutForm p{font-size:14px;line-height:1.65}#checkoutForm [hidden]{display:none!important}#checkoutResult{padding:12px 0;line-height:1.8;overflow-wrap:anywhere}';
+  style.textContent = `#checkoutForm{padding:24px 0 8px;text-align:left;color:#51443d;line-height:1.6}
+#checkoutForm .checkoutIntro{margin:0 4px 26px}
+#checkoutForm h3{font-size:23px;margin:0 0 8px;color:#514038}
+#checkoutForm p{font-size:14px;line-height:1.7;margin:0;color:#8b7870}
+#checkoutForm .checkoutCard{min-width:0;margin:0 0 28px;padding:18px 20px 22px;border:1px solid #eadfd8;border-radius:18px;background:#fffdfb}
+#checkoutForm legend{padding:0 8px;font-size:17px;font-weight:700;color:#665149}
+#checkoutForm legend span{font-size:12px;letter-spacing:1px;color:#ac8b7c;margin-right:5px}
+#checkoutForm label{display:block;margin:0 0 18px;font-size:14px;font-weight:600;color:#6d5950}
+#checkoutForm label:last-child{margin-bottom:0}
+#checkoutForm input:not([type=checkbox]),#checkoutForm select,#checkoutForm textarea{display:block;min-width:0;width:100%;box-sizing:border-box;min-height:48px;padding:12px 14px;margin-top:8px;border:1px solid #dfd2c9;border-radius:11px;font:inherit;font-size:16px;font-weight:400;background:#fff;color:#493a33;line-height:1.5}
+#checkoutForm input:focus,#checkoutForm select:focus,#checkoutForm textarea:focus{outline:2px solid #c8afa1;outline-offset:2px}
+#checkoutForm .checkoutGrid{display:grid;grid-template-columns:1fr;gap:0 20px}
+#checkoutForm .checkoutCheck{display:flex;align-items:flex-start;gap:10px;font-weight:400;margin:20px 0;background:#f7f0eb;padding:13px 14px;border-radius:10px}
+#checkoutForm input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:3px 0 0;accent-color:#927366}
+#checkoutForm .checkoutOptional{margin:4px 0 16px;border-top:1px solid #eee4dd;padding-top:16px}
+#checkoutForm .checkoutOptional summary{font-size:14px;color:#897267;cursor:pointer;padding:4px 0}
+#checkoutForm .checkoutOptional[open] summary{margin-bottom:16px}
+#checkoutForm .checkoutLineLink{display:inline-block;font-size:14px;color:#747b65;text-decoration:none;padding:5px 0}
+#checkoutForm .checkoutHint{margin:10px 0 24px}
+#checkoutForm .checkoutNoHeading{margin-bottom:0}
+#checkoutForm .checkoutReview{background:#fffaf5}
+#checkoutForm #checkoutSummary .orderConfirmBox{border:0;border-radius:0;background:transparent;padding:0;margin:0;box-shadow:none}
+#checkoutForm #checkoutSummary .orderConfirmTitle,#checkoutForm #checkoutSummary .orderConfirmAfter{display:none}
+#checkoutForm #checkoutSummary .orderConfirmProduct{overflow-wrap:anywhere}
+#checkoutForm #checkoutShippingSummary{padding-top:18px;margin-top:18px;border-top:1px solid #eadfd8}
+#checkoutForm .checkoutMoneyRow{display:flex;justify-content:space-between;gap:18px;padding:5px 0;font-size:15px}
+#checkoutForm .checkoutMoneyRow strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+#checkoutForm .checkoutMoneyRow.total{margin-top:12px;padding-top:16px;border-top:1px solid #eadfd8;font-size:19px;font-weight:700;color:#634d40}
+#checkoutForm .checkoutMoneyNote{font-size:13px;margin-top:12px;color:#947e70}
+#checkoutForm .checkoutConsent{padding:0;background:none;font-size:13px;color:#8b7870;margin:8px 4px 20px}
+#checkoutForm #checkoutSubmit{min-height:52px;border:0;border-radius:12px;background:#84695c;color:#fff;font-size:17px;letter-spacing:.5px}
+#checkoutForm #checkoutSubmit:disabled{opacity:.6}
+#checkoutForm [hidden]{display:none!important}
+#checkoutForm .checkoutSrOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+#checkoutResult{padding:20px;margin:22px 0;border:1px solid #e7ddd3;border-radius:16px;background:#fffdf9;line-height:1.9;overflow-wrap:anywhere;text-align:left}
+#checkoutResult:empty{display:none}
+#overlay .cartPanel:has(#checkoutForm:not([hidden])){max-height:92dvh;max-height:min(92dvh,100%);padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+@media(min-width:600px){#checkoutForm .checkoutGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+@media(max-width:420px){#checkoutForm .checkoutCard{padding:16px 15px 20px;margin-bottom:24px}#checkoutForm h3{font-size:22px}}
+`;
   document.head.appendChild(style);
   const form = document.getElementById('checkoutForm');
   const result = document.getElementById('checkoutResult');
@@ -8449,6 +8501,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     form.elements.address.required = home;
     form.elements.storeName.required = !home;
     form.elements.storeArea.required = !home;
+    document.getElementById('checkoutPaymentHint').hidden=form.elements.payment.value==='貨到付款';
     refreshShippingSummary();
   }
   function refreshShippingSummary(){
@@ -8462,75 +8515,26 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     });
     const discount=hasQueenaCoupon() && subtotal>=500 ? 30 : 0;
     const fee=form.elements.shipping.value==='宅配' ? null : 40;
-    box.textContent='商品小計：'+formatQueenaMoney_(subtotal)+(unknown?'＋待確認優惠商品':'')+(discount?'\n購物券：-'+formatQueenaMoney_(discount):'')+'\n'+(fee===null?'宅配運費待 Queena 確認':'超商運費：$40')+'\n'+
-      (fee===null?'':
-      (unknown?'已知金額（含運）：':'訂單總額（含運）：')+formatQueenaMoney_(subtotal-discount+fee)+(unknown?'，另加待確認優惠商品金額':''));
-    box.style.whiteSpace='pre-wrap';
+    function moneyRow(label,value,total){return '<div class="checkoutMoneyRow'+(total?' total':'')+'"><span>'+label+'</span><strong>'+value+'</strong></div>';}
+    box.innerHTML=moneyRow('商品小計',formatQueenaMoney_(subtotal)+(unknown?'＋待確認':''),false)+
+      (discount?moneyRow('購物券','−'+formatQueenaMoney_(discount),false):'')+
+      (fee===null?'<div class="checkoutMoneyNote">宅配運費待 Queena 確認</div>':moneyRow('超商運費','$40',false)+moneyRow(unknown?'目前金額（含運）':'合計（含運）',formatQueenaMoney_(subtotal-discount+fee),true))+
+      (unknown?'<div class="checkoutMoneyNote">優惠商品金額將由 Queena 確認。</div>':'');
   }
+
   function syncReceiver(){
     const same=form.elements.sameReceiver.checked;
     form.elements.receiver.disabled=same;
     form.elements.phone.disabled=same;
+    document.getElementById('receiverFields').hidden=same;
     if(same){form.elements.receiver.value=form.elements.buyerName.value;form.elements.phone.value=form.elements.buyerPhone.value;}
   }
   form.elements.shipping.addEventListener('change', toggleFields);
+  form.elements.payment.addEventListener('change', toggleFields);
   form.elements.sameReceiver.addEventListener('change', syncReceiver);
   form.elements.buyerName.addEventListener('input', syncReceiver);
   form.elements.buyerPhone.addEventListener('input', syncReceiver);
   syncReceiver();
   toggleFields();
-  document.getElementById('openCheckout').addEventListener('click',function(){
-    const items = Object.values(cart || {});
-    if(!items.length){ alert('請先加入商品');return; }
-    form.hidden = !form.hidden;
-    messageBox.hidden=!form.hidden;
-    document.getElementById('checkoutSummary').innerHTML = createMessage(false);refreshShippingSummary();
-    if(!form.hidden) form.scrollIntoView({behavior:'smooth',block:'start'});
-  });
-  panel.addEventListener('change',function(){if(!form.hidden){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshShippingSummary();}});
-  panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshShippingSummary();},0);});
-  form.addEventListener('submit',async function(event){
-    event.preventDefault();
-    syncReceiver();
-    if(inFlight || queenaOrderInFlight) return;
-    if(!form.reportValidity()){result.textContent='訂單尚未送出，請完成標示的必填欄位。';return;}
-    const items = Object.values(cart || {}).map(function(i){return {name:i.name,spec:i.spec || '',qty:Number(i.qty)};});
-    if(!items.length){ alert('請先加入商品');return; }
-    if(!products.length){ alert('商品資料尚未完成載入，請稍候再試');return; }
-    const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || (getProductSpecs(p).length && !getProductSpecs(p).includes(i.spec));});
-    if(missing){ alert('請先確認「'+missing.name+'」的規格');renderCartPanel();return; }
-    const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
-    ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeArea','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
-    if(payload.shipping==='宅配'){payload.storeName='';payload.storeArea='';}else{payload.address='';}
-    payload.sameReceiver=form.elements.sameReceiver.checked;
-    payload.contactMethod=payload.lineId ? 'lineId' : 'phone';
-    const fingerprint = JSON.stringify(payload);
-    if(!requestId || fingerprint !== lastPayload){
-      requestId = (window.crypto && typeof window.crypto.randomUUID==='function') ? window.crypto.randomUUID() : 'checkout-'+Date.now()+'-'+Math.random().toString(36).slice(2);
-      lastPayload = fingerprint;
-    }
-    payload.requestId = requestId;
-    inFlight=true;queenaOrderInFlight=true;sendBtn.disabled=true; submit.disabled=true;submit.textContent='正在建立訂單…';result.textContent='';
-    try{
-      const data=await apiPost('checkout',payload);
-      if(!data.saved || !data.orderId) throw new Error('尚未取得訂單儲存確認，請先向 Queena 查詢');
-      result.textContent='✅ 訂單已建立：'+data.orderId+'\n'+
-        '商品小計：$'+Number(data.subtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認優惠商品':'')+'\n'+
-        '購物券：'+(data.discount ? '-$'+data.discount : '未折抵')+'\n'+
-        '目前小計：$'+Number(data.currentSubtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認優惠商品':'')+'\n'+
-        (data.shippingFee===null?'宅配運費待 Queena 確認':'超商運費：$'+data.shippingFee)+'\n'+(data.totalAmount!==null?'訂單總額（含運）：$'+Number(data.totalAmount).toLocaleString('zh-TW'):data.shippingFee!==null?'已知金額（含運）：$'+Number(data.knownTotal).toLocaleString('zh-TW')+'，另加待確認優惠商品金額':'訂單總額：待確認')+'\n付款：'+payload.payment+'｜配送：'+payload.shipping+'\n'+
-        '請加 Queena LINE 好友，主動傳送上方訂單編號。確認後再安排付款與出貨。'+
-        (data.notification && !data.notification.accepted ? '\nLINE 自動通知尚未成功；訂單已存入試算表，請主動傳送訂單編號。' : '');
-      const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);
-      cart={};queenaLocalStorage.removeItem('queenaPendingCart');queenaLocalStorage.removeItem('queenaPendingSend');queenaSessionStorage.removeItem('queenaPendingCartBackup');queenaSessionStorage.removeItem('queenaPendingSendBackup');
-      queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
-      form.reset();toggleFields();syncReceiver();form.hidden=true;messageBox.hidden=false;requestId='';lastPayload='';
-      result.scrollIntoView({behavior:'smooth',block:'nearest'});
-    }catch(err){result.textContent='未取得完成確認：'+err.message+'\n若結果不明，請先向 Queena 查詢，避免重新建立另一筆訂單。';}
-    finally{inFlight=false;queenaOrderInFlight=false;sendBtn.disabled=false;submit.disabled=false;submit.textContent='確認資料並送出訂單';}
-  });
-})();
-
-</script>
-</body>
-</html>
+  function setCheckoutView(open){
+    form.hidden=!open;messageBox.hidden=
