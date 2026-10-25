@@ -5975,21 +5975,27 @@ function queenaSpecOptions_(raw){
 }
 function queenaPriceValue_(basePrice, selectedSpec){
   const spec=String(selectedSpec || '').trim();
-  const prices=Array.from(spec.matchAll(/(?:NT\$|NTD\s*|[$＄])\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi));
-  // A selected bundle is one priced option. The leading pack count is not another multiplier.
-  if(prices.length){
-    if(prices.length!==1)return null;
-    const price=Number(prices[0][1].replace(/,/g,''));
-    return Number.isFinite(price)?price:null;
+  const amounts=Array.from(spec.matchAll(/(?:NT\$|NTD\s*|[$＄])\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi)).map(function(m){return Number(m[1].replace(/,/g,''));});
+  const firstLabel=spec.split('｜')[0].trim();
+  const fixedBundle=firstLabel.match(/^\d+\s*(?:盒|包|組|袋|瓶|套|件|顆|罐|入)\s*(?:[:：=]\s*)?[$＄]?\s*(\d{2,}(?:,\d{3})*(?:\.\d{1,2})?)\s*元?$/);
+  if(fixedBundle)return Number(fixedBundle[1].replace(/,/g,''));
+  if(amounts.length){
+    if(amounts.some(function(n){return !Number.isFinite(n);}))return null;
+    const first=spec.split('｜')[0].trim();
+    const priceOptions=String(basePrice||'').split(/[｜|]/).map(function(v){return v.trim();});
+    const chosenPrice=priceOptions.find(function(v){return v===first;});
+    if(chosenPrice){const m=chosenPrice.match(/(?:NT\$|NTD\s*|[$＄])\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/i);if(m)return Number(m[1].replace(/,/g,''));}
+    const bundleChoice=first.match(/^\d+\s*(?:盒|包|組|袋|瓶|套|件|顆|罐|入)\s*(?:[:：=]\s*)?[$＄]?\s*(\d{2,}(?:,\d{3})*(?:\.\d{1,2})?)\s*元?$/);
+    if(bundleChoice)return Number(bundleChoice[1].replace(/,/g,''));
+    const base=String(basePrice||'').replace(/,/g,'').trim().match(/^(?:NT\$|NTD|[$＄])?\s*(\d+(?:\.\d+)?)$/i);
+    if(base)return Number(base[1])+amounts.reduce(function(a,b){return a+b;},0);
+    return amounts.length===1?amounts[0]:null;
   }
-  // Existing sheet labels such as "2包699" are unambiguous bundle prices.
-  const bundle=spec.match(/^\d+\s*(?:盒|包|組|袋|瓶|套|件|顆|罐|入)\s*(?:[:：=]\s*)?(\d{2,}(?:,\d{3})*(?:\.\d{1,2})?)\s*元?$/);
-  if(bundle){const price=Number(bundle[1].replace(/,/g,''));return Number.isFinite(price)?price:null;}
-  const price=String(basePrice || '').replace(/,/g,'').trim().match(/^(?:NT\$|NTD|[$＄])?\s*(\d+(?:\.\d+)?)$/i);
-  if(!price)return null;
-  const amount=Number(price[1]);return Number.isFinite(amount)?amount:null;
+  const bundle=spec.match(/^\d+\s*(?:盒|包|組|袋|瓶|套|件|顆|罐|入)\s*(?:[:：=]\s*)?[$＄]?\s*(\d{2,}(?:,\d{3})*(?:\.\d{1,2})?)\s*元?$/);
+  if(bundle)return Number(bundle[1].replace(/,/g,''));
+  const price=String(basePrice||'').replace(/,/g,'').trim().match(/^(?:NT\$|NTD|[$＄])?\s*(\d+(?:\.\d+)?)$/i);
+  return price?Number(price[1]):null;
 }
-
 function parseQueenaPrice_(raw, selectedSpec){return {text:String(raw || '').trim(),amount:queenaPriceValue_(raw,selectedSpec)};}
 
 function formatQueenaMoney_(amount){
