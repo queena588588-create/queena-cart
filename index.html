@@ -5751,8 +5751,11 @@ function queenaMixRead_(p,spec){
 }
 function queenaValidSpec_(p,spec){
  if(queenaMixConfig_(p))return queenaMixRead_(p,spec).valid;
+ const priceChoices=queenaPriceChoices_(p);
+ if(priceChoices.length>1)return priceChoices.some(function(x){return x.label===spec;});
  const opts=queenaSpecOptions_(p.specs);return opts.length?opts.indexOf(spec)>=0:!spec;
 }
+function queenaPriceChoices_(p){return queenaSpecOptions_(p&&p.price).map(function(label){const m=label.match(/^(.*?)\s*[$＄]\s*(\d[\d,]*(?:\.\d{1,2})?)$/);return m?{label:label,amount:Number(m[2].replace(/,/g,''))}:null;}).filter(Boolean);}
 
 function getProductSpecs(product){return queenaSpecOptions_(product && product.specs);}
 
@@ -5819,14 +5822,14 @@ function renderCartPanel(){
           '</div>' +
 
           (
-            getProductSpecs(product).length
+            (getProductSpecs(product).length || queenaPriceChoices_(product).length>1)
               ? '<div class="cartSpecBox">' +
-                  '<div class="cartSpecLabel">規格選擇 <span class="specRequired">＊可複選</span></div>' +
+                  '<div class="cartSpecLabel">規格選擇</div>' +
                   '<div class="cartSpecChoices">' +
-                    getProductSpecs(product).map(function(spec){
+                    (queenaPriceChoices_(product).length>1?queenaPriceChoices_(product).map(function(x){return x.label;}):getProductSpecs(product)).map(function(spec){
                       return (
                         '<button type="button" class="cartSpecBtn ' +
-                        (String(item.spec || '').split('｜').map(function(v){ return v.trim(); }).filter(Boolean).includes(spec) ? 'active' : '') +
+                        (String(item.spec || '')===spec ? 'active' : '') +
                         '" data-spec="' +
                         escapeHtml(spec) +
                         '">' +
@@ -5899,6 +5902,9 @@ function renderCartPanel(){
 
           const clickedSpec =
             specBtn.getAttribute('data-spec') || '';
+
+          if(queenaMixConfig_(product))return;
+          if(queenaPriceChoices_(product).length>1){item.spec=clickedSpec;updateCart();renderCartPanel();return;}
 
           let selectedSpecs =
             String(item.spec || '')
