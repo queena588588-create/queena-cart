@@ -4304,7 +4304,7 @@ html.shared-product-initial #queenaHomeEntry::after{
 }
 </style>
 
-</head>
+<style>.cartQtyInput{width:56px;min-height:40px;text-align:center;border:1px solid #e5d4cd;border-radius:10px;font-size:16px;color:#5b433c;background:#fff;box-sizing:border-box}.mixFlavorGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mixFlavorGrid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5b433c}.mixFlavorGrid input{width:100%;min-height:40px;box-sizing:border-box;border:1px solid #e5d4cd;border-radius:8px;padding:6px;font-size:16px}.mixCountStatus{font-size:12px;line-height:1.6;color:#8f494d;margin:10px 0 0}@media(max-width:420px){.mixFlavorGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}</style></head>
 
 <body>
 
@@ -5737,6 +5737,23 @@ function updateCart(){
 // ==============================
 
 
+
+function queenaMixConfig_(p){
+ const prices=queenaSpecOptions_(p.price), flavors=queenaSpecOptions_(p.specs);
+ const bundles=prices.map(function(s){const m=s.match(/^(\d+)\s*(片|入|包|顆|個|瓶|袋)\s*[$＄]\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)$/);return m?{label:s,count:Number(m[1]),unit:m[2]}:null;});
+ return bundles.length>1 && bundles.every(function(b){return b && b.count>0;}) && flavors.length && flavors.every(function(s){return !/[$＄]/.test(s);}) ? {bundles:bundles,flavors:flavors}:null;
+}
+function queenaMixRead_(p,spec){
+ const c=queenaMixConfig_(p);if(!c)return null;
+ const parts=String(spec||'').split('｜'),b=c.bundles.find(function(b){return b.label===parts[0];}),counts={};let valid=!!b,sum=0;
+ parts.slice(1).forEach(function(s){const m=s.match(/^(.*)×(\d+)$/);if(!m || c.flavors.indexOf(m[1])<0 || counts[m[1]]!==undefined || Number(m[2])<1){valid=false;return;}counts[m[1]]=Number(m[2]);sum+=Number(m[2]);});
+ return {config:c,bundle:b,counts:counts,sum:sum,valid:valid && sum===b.count};
+}
+function queenaValidSpec_(p,spec){
+ if(queenaMixConfig_(p))return queenaMixRead_(p,spec).valid;
+ const opts=queenaSpecOptions_(p.specs);return opts.length?opts.indexOf(spec)>=0:!spec;
+}
+
 function getProductSpecs(product){return queenaSpecOptions_(product && product.specs);}
 
 
@@ -5830,14 +5847,33 @@ function renderCartPanel(){
 
         '<button class="minus">−</button>' +
 
-        '<span>' +
-          item.qty +
-        '</span>' +
+        '<input class="cartQtyInput" aria-label="購買組數" type="number" inputmode="numeric" min="1" max="99" step="1" value="' + item.qty + '">' +
 
         '<button class="plus">＋</button>' +
 
       '</div>';
 
+
+    const qtyInput=row.querySelector('.cartQtyInput');
+    qtyInput.addEventListener('change',function(){
+      const n=Number(qtyInput.value);if(!Number.isSafeInteger(n)||n<1||n>99){qtyInput.value=item.qty;alert('購買數量請輸入1至99的整數');return;}item.qty=n;updateCart();messageBox.innerHTML=createMessage();
+    });
+    const mix=queenaMixRead_(product,item.spec);
+    if(mix){
+      const box=row.querySelector('.cartSpecBox');
+      box.innerHTML='<div class="cartSpecLabel">片數／價格（每組）</div><div class="cartSpecChoices">'+mix.config.bundles.map(function(b,i){return '<button type="button" class="cartSpecBtn '+(mix.bundle===b?'active':'')+'" data-bundle="'+i+'">'+escapeHtml(b.label)+'</button>';}).join('')+'</div><div class="cartSpecLabel" style="margin-top:14px">每組口味分配</div><div class="mixFlavorGrid">'+mix.config.flavors.map(function(f,i){return '<label>'+escapeHtml(f)+'<input type="number" inputmode="numeric" min="0" step="1" data-flavor="'+i+'" value="'+(mix.counts[f]||0)+'"></label>';}).join('')+'</div><p class="mixCountStatus" aria-live="polite"></p>';
+      let chosen=mix.bundle,counts=mix.counts;
+      function saveMix(){
+        item.spec=(chosen?chosen.label:'')+mix.config.flavors.filter(function(f){return counts[f]>0;}).map(function(f){return '｜'+f+'×'+counts[f];}).join('');
+        if(box.querySelector('input:invalid'))item.spec+='｜數量格式錯誤';
+        const sum=Object.values(counts).reduce(function(a,b){return a+b;},0),target=chosen?chosen.count:0;
+        box.querySelector('.mixCountStatus').textContent=chosen?'已分配 '+sum+'／'+target+chosen.unit+(sum===target?' ✓':sum<target?'，還差 '+(target-sum)+chosen.unit:'，多了 '+(sum-target)+chosen.unit):'請先選擇片數／價格';
+        messageBox.innerHTML=createMessage();
+      }
+      box.querySelectorAll('[data-bundle]').forEach(function(btn){btn.addEventListener('click',function(){chosen=mix.config.bundles[Number(btn.dataset.bundle)];box.querySelectorAll('[data-bundle]').forEach(function(b){b.classList.toggle('active',b===btn);});saveMix();});});
+      box.querySelectorAll('[data-flavor]').forEach(function(input){input.addEventListener('input',function(){const n=Number(input.value);const valid=Number.isSafeInteger(n)&&n>=0&&n<=100000;input.setCustomValidity(valid?'':'請輸入非負整數');counts[mix.config.flavors[Number(input.dataset.flavor)]]=valid?n:0;saveMix();});});
+      saveMix();
+    }
     row.querySelector('.buyBtn')
       .addEventListener('click', function(){
 
@@ -5906,7 +5942,7 @@ function renderCartPanel(){
     row.querySelector('.plus')
       .addEventListener('click', function(){
 
-        item.qty++;
+        item.qty=Math.min(99,Number(item.qty)+1);
 
         updateCart();
         renderCartPanel();
@@ -6144,8 +6180,7 @@ sendBtn.addEventListener('click', function(){
         }) || {};
 
       return (
-        getProductSpecs(product).length > 0 &&
-        !String(item.spec || '').trim()
+        !queenaValidSpec_(product,item.spec || '')
       );
     });
 
@@ -8603,7 +8638,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     if(!warning)return;
     const missing=Object.values(cart || {}).filter(function(item){
       const product=products.find(function(p){return p.name===item.name;});
-      return product && getProductSpecs(product).length && !String(item.spec || '').trim();
+      return product && !queenaValidSpec_(product,item.spec || '');
     });
     warning.hidden=!missing.length;
     warning.textContent=missing.length?'尚有商品未選規格：'+missing.map(function(item){return item.name;}).join('、')+'。請返回商品清單選擇後再送出。':'';
@@ -8625,8 +8660,8 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     const items = Object.values(cart || {}).map(function(i){return {name:i.name,spec:i.spec || '',qty:Number(i.qty)};});
     if(!items.length){ alert('請先加入商品');return; }
     if(!products.length){ alert('商品資料尚未完成載入，請稍候再試');return; }
-    const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || (getProductSpecs(p).length && !getProductSpecs(p).includes(i.spec));});
-    if(missing){ alert('請先確認「'+missing.name+'」的規格');setCheckoutView(false);renderCartPanel();cartItems.scrollIntoView({behavior:'smooth',block:'start'});return; }
+    const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || !queenaValidSpec_(p,i.spec);});
+    if(missing){ alert('請確認「'+missing.name+'」的規格及口味總數');setCheckoutView(false);renderCartPanel();cartItems.scrollIntoView({behavior:'smooth',block:'start'});return; }
     const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
     ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeArea','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
     if(payload.shipping==='宅配'){payload.storeName='';payload.storeArea='';}else{payload.address='';}
