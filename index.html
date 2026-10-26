@@ -6578,7 +6578,7 @@ function submitWishlist(items){
       sendBtn.textContent =
         'LINE 人工確認訂單';
 
-      alert('清單已存入試算表。'+(data.notification && !data.notification.accepted ? 'LINE 自動通知尚未成功，請主動聯絡 Queena。':'請開啟下方 LINE 聯絡 Queena 確認訂單。'));
+      alert('訂單已送出。'+(data.notification && !data.notification.accepted ? 'LINE 自動通知尚未成功，請主動聯絡 Queena。':'請開啟下方 LINE 聯絡 Queena 確認訂單。'));
       showLineContactPrompt_();
 
       try{
@@ -6666,7 +6666,7 @@ function handleLineOrderReceipt_(profile){
     overlay.classList.add('show');overlay.style.display='flex';
     let status=document.getElementById('lineReturnResult');
     if(!status){status=document.createElement('div');status.id='lineReturnResult';status.className='messageBox';messageBox.parentNode.insertBefore(status,messageBox.nextSibling);}
-    status.textContent=receipt.saved?'✅ LINE身分已確認，清單已存入試算表。'+(receipt.notice?'LINE已接受通知。':'請主動聯絡Queena確認清單。'):'LINE身分已確認，清單尚未完成儲存：'+(receipt.error || '請向Queena查詢');
+    status.textContent=receipt.saved?'✅ LINE身分已確認，訂單已送出。'+(receipt.notice?'LINE已接受通知。':'請主動聯絡Queena確認清單。'):'LINE身分已確認，清單尚未完成儲存：'+(receipt.error || '請向Queena查詢');
     showLineContactPrompt_();
     alert(receipt.saved?'✅ LINE確認訂單已完成，清單已儲存。':'清單尚未完成儲存：'+(receipt.error || '請向Queena查詢'));
   },300);
