@@ -4307,7 +4307,18 @@ html.shared-product-initial #queenaHomeEntry::after{
 <style>.cartQtyInput{width:56px;min-height:40px;text-align:center;border:1px solid #e5d4cd;border-radius:10px;font-size:16px;color:#5b433c;background:#fff;box-sizing:border-box}.mixFlavorGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mixFlavorGrid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5b433c}.mixFlavorGrid input{width:100%;min-height:40px;box-sizing:border-box;border:1px solid #e5d4cd;border-radius:8px;padding:6px;font-size:16px}.mixCountStatus{font-size:12px;line-height:1.6;color:#8f494d;margin:10px 0 0}@media(max-width:420px){.mixFlavorGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}</style><style>
 .qeVariants{width:100%;box-sizing:border-box}.qeVariantRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #eee4de}.qeVariantRow>label{display:flex;align-items:center;gap:9px;min-width:0;flex:1;font-size:14px;line-height:1.5}.qeVariantRow input[type=checkbox]{width:19px;height:19px;flex-shrink:0;accent-color:#96776b}.qeVariantRow small{display:block;font-size:12px;color:#9a7c70}.qeVariantQty{display:flex;align-items:center;gap:5px;flex-shrink:0}.qeVariantQty button{width:30px;height:34px;border:0;border-radius:50%;background:#faedcc;color:#775b4a;font-size:19px}.qeVariantQty input{width:48px;min-height:36px;box-sizing:border-box;border:1px solid #dfd1c8;border-radius:8px;text-align:center;font-size:16px;background:white}.qeVariantQty input:disabled{opacity:.4}.qeVariantQty input:invalid{border-color:#d33}.qeRemoveProduct{margin-top:12px;background:transparent;border:0;text-decoration:underline;color:#93796c;cursor:pointer}.qeVariants .cartSpecLabel{margin-bottom:6px}
 @media(max-width:480px){.qeVariants .qeVariantRow{gap:6px}.qeVariantRow>label{font-size:13px}.qeVariantQty button{width:26px}.qeVariantQty input{width:42px}}
-</style></head>
+</style>
+<style id="queena-cart-follow-scroll-v13">
+@media(max-width:760px){
+  #mobileSite .mMain{padding-bottom:calc(88px + env(safe-area-inset-bottom))!important}
+  #mobileSite .mBottomNav{height:calc(65px + env(safe-area-inset-bottom))!important;box-sizing:content-box!important}
+  #mobileSite #mCartBtn{color:#e45778!important;font-weight:800!important}
+  #mobileSite #mCartBtn .mNavIcon{font-size:24px!important;filter:drop-shadow(0 1px 2px rgba(228,87,120,.2))}
+  #mobileSite #mCartBtn .mCartBadge{top:4px;left:calc(50% + 9px);min-width:19px;height:19px;line-height:19px;font-size:10px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+  #mobileSite #mCartBtn:active{background:#fff4f5}
+}
+</style>
+</head>
 
 <body>
 
@@ -8796,7 +8807,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       receiptLines.push('',payload.shipping+'｜'+payload.payment);
       if(payload.payment==='LINE Pay')receiptLines.push('請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。');
       else if(payload.payment==='貨到付款')receiptLines.push('請將訂單編號傳給 Queena，方便確認。');
-      if(data.notification && !data.notification.accepted)receiptLines.push('訂單已存入試算表，請主動傳送訂單編號。');
+      if(data.notification && !data.notification.accepted)receiptLines.push('訂單已送出');
       result.textContent=receiptLines.join('\n');
       completedOrderId=data.orderId;completedBuyerPhone=payload.buyerPhone;
       receiptActions.hidden=false;
