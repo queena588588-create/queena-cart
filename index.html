@@ -4304,7 +4304,10 @@ html.shared-product-initial #queenaHomeEntry::after{
 }
 </style>
 
-<style>.cartQtyInput{width:56px;min-height:40px;text-align:center;border:1px solid #e5d4cd;border-radius:10px;font-size:16px;color:#5b433c;background:#fff;box-sizing:border-box}.mixFlavorGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mixFlavorGrid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5b433c}.mixFlavorGrid input{width:100%;min-height:40px;box-sizing:border-box;border:1px solid #e5d4cd;border-radius:8px;padding:6px;font-size:16px}.mixCountStatus{font-size:12px;line-height:1.6;color:#8f494d;margin:10px 0 0}@media(max-width:420px){.mixFlavorGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}</style></head>
+<style>.cartQtyInput{width:56px;min-height:40px;text-align:center;border:1px solid #e5d4cd;border-radius:10px;font-size:16px;color:#5b433c;background:#fff;box-sizing:border-box}.mixFlavorGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mixFlavorGrid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5b433c}.mixFlavorGrid input{width:100%;min-height:40px;box-sizing:border-box;border:1px solid #e5d4cd;border-radius:8px;padding:6px;font-size:16px}.mixCountStatus{font-size:12px;line-height:1.6;color:#8f494d;margin:10px 0 0}@media(max-width:420px){.mixFlavorGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}</style><style>
+.qeVariants{width:100%;box-sizing:border-box}.qeVariantRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #eee4de}.qeVariantRow>label{display:flex;align-items:center;gap:9px;min-width:0;flex:1;font-size:14px;line-height:1.5}.qeVariantRow input[type=checkbox]{width:19px;height:19px;flex-shrink:0;accent-color:#96776b}.qeVariantRow small{display:block;font-size:12px;color:#9a7c70}.qeVariantQty{display:flex;align-items:center;gap:5px;flex-shrink:0}.qeVariantQty button{width:30px;height:34px;border:0;border-radius:50%;background:#faedcc;color:#775b4a;font-size:19px}.qeVariantQty input{width:48px;min-height:36px;box-sizing:border-box;border:1px solid #dfd1c8;border-radius:8px;text-align:center;font-size:16px;background:white}.qeVariantQty input:disabled{opacity:.4}.qeVariantQty input:invalid{border-color:#d33}.qeRemoveProduct{margin-top:12px;background:transparent;border:0;text-decoration:underline;color:#93796c;cursor:pointer}.qeVariants .cartSpecLabel{margin-bottom:6px}
+@media(max-width:480px){.qeVariants .qeVariantRow{gap:6px}.qeVariantRow>label{font-size:13px}.qeVariantQty button{width:26px}.qeVariantQty input{width:42px}}
+</style></head>
 
 <body>
 
@@ -5056,7 +5059,7 @@ function tryAutoSubmitPending_(){
     return;
   }
 
-  const items = Object.values(cart || {});
+  const items = queenaCartLines_();
   if(items.length === 0) return;
 
   pendingSubmitInFlight = true;
@@ -5715,7 +5718,7 @@ function updateCart(){
 
   let total = 0;
 
-  Object.values(cart)
+  queenaCartLines_()
     .forEach(function(item){
       total += Number(item.qty) || 1;
     });
@@ -5751,16 +5754,113 @@ function queenaMixRead_(p,spec){
 }
 function queenaValidSpec_(p,spec){
  if(queenaMixConfig_(p))return queenaMixRead_(p,spec).valid;
- const priceChoices=queenaPriceChoices_(p);
- if(priceChoices.length>1)return priceChoices.some(function(x){return x.label===spec;});
- const opts=queenaSpecOptions_(p.specs);return opts.length?opts.indexOf(spec)>=0:!spec;
+ const prices=queenaPriceChoices_(p),opts=queenaSpecOptions_(p.specs);
+ if(prices.length>1){
+   const parts=String(spec||'').split('｜');
+   if(!prices.some(function(x){return x.label===parts[0];}))return false;
+   return opts.length ? parts.length===2 && opts.indexOf(parts[1])>=0 : parts.length===1;
+ }
+ return opts.length?opts.indexOf(spec)>=0:!spec;
 }
 function queenaPriceChoices_(p){return queenaSpecOptions_(p&&p.price).map(function(label){const m=label.match(/^(.*?)\s*[$＄]\s*(\d[\d,]*(?:\.\d{1,2})?)$/);return m?{label:label,amount:Number(m[2].replace(/,/g,''))}:null;}).filter(Boolean);}
 
 function getProductSpecs(product){return queenaSpecOptions_(product && product.specs);}
 
 
+// V12: selected variants become independent order lines, with no client prices.
+function queenaVariantOptions_(p){
+  if(queenaMixConfig_(p))return [];
+  const prices=queenaPriceChoices_(p),specs=getProductSpecs(p);
+  if(prices.length>1){
+    return prices.reduce(function(list,price){
+      return list.concat(specs.length?specs.map(function(spec){return price.label+'｜'+spec;}):[price.label]);
+    },[]);
+  }
+  return specs;
+}
+function queenaVariantSelection_(item,p){
+  const options=queenaVariantOptions_(p);
+  if(!options.length)return null;
+  if(!item.variantQuantities || typeof item.variantQuantities!=='object' || Array.isArray(item.variantQuantities)){
+    const selected={};
+    const old=String(item.spec||'');
+    const labels=options.indexOf(old)>=0?[old]:old.split('｜');
+    labels.forEach(function(label){if(options.indexOf(label)>=0)selected[label]=Number(item.qty)||1;});
+    item.variantQuantities=selected;
+  }
+  return item.variantQuantities;
+}
+function queenaCartLines_(){
+  const result=[];
+  Object.values(cart||{}).forEach(function(item){
+    const p=products.find(function(p){return p.name===item.name;})||{};
+    const options=queenaVariantOptions_(p),selected=queenaVariantSelection_(item,p);
+    if(!selected){result.push(item);return;}
+    let count=0;
+    options.forEach(function(spec){
+      if(!Object.prototype.hasOwnProperty.call(selected,spec))return;
+      count++;
+      result.push({name:item.name,spec:spec,qty:Number(selected[spec]),intent:item.intent||'buy'});
+    });
+    // A product with no selected variant remains visible to required-spec checks.
+    if(!count)result.push({name:item.name,spec:'',qty:1,intent:item.intent||'buy'});
+  });
+  return result;
+}
 function renderCartPanel(){
+  renderCartPanelLegacy_();
+  const rows=Array.from(cartItems.children);
+  Object.values(cart).forEach(function(item,index){
+    const p=products.find(function(p){return p.name===item.name;})||{};
+    const options=queenaVariantOptions_(p);
+    if(!options.length)return;
+    const selected=queenaVariantSelection_(item,p),row=rows[index];
+    if(!row)return;
+    const oldBox=row.querySelector('.cartSpecBox');
+    if(!oldBox)return;
+    const box=document.createElement('div');box.className='cartSpecBox qeVariants';
+    box.innerHTML='<div class="cartSpecLabel">規格可複選・各規格分別填數量</div>'+options.map(function(spec,i){
+      const checked=Object.prototype.hasOwnProperty.call(selected,spec);
+      const amount=parseQueenaPrice_(p.price,spec).amount;
+      return '<div class="qeVariantRow" data-variant="'+i+'"><label><input type="checkbox" '+(checked?'checked':'')+'><span>'+escapeHtml(spec)+'<small>單價 '+(amount===null?'待確認':formatQueenaMoney_(amount))+'</small></span></label><div class="qeVariantQty"><button type="button" data-step="-1" aria-label="減少數量">−</button><input type="number" inputmode="numeric" min="1" max="99" step="1" aria-label="'+escapeHtml(spec)+' 數量" value="'+(checked?selected[spec]:1)+'" '+(checked?'':'disabled')+'><button type="button" data-step="1" aria-label="增加數量">＋</button></div></div>';
+    }).join('')+'<button type="button" class="qeRemoveProduct">移除此商品</button>';
+    oldBox.replaceWith(box);
+    const qty=row.querySelector('.qty');if(qty)qty.remove();
+    function sync(){
+      item.spec='';item.qty=1;
+      messageBox.innerHTML=createMessage();
+      const total=queenaCartLines_().reduce(function(n,i){return n+(Number(i.qty)||0);},0);
+      cartCount.textContent=total;
+      if(typeof syncMobileCartBadge==='function')syncMobileCartBadge();
+      // Notify checkout summaries without rebuilding controls or losing focus.
+      box.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    box.querySelectorAll('[data-variant]').forEach(function(vrow){
+      const spec=options[Number(vrow.dataset.variant)],check=vrow.querySelector('[type=checkbox]'),input=vrow.querySelector('[type=number]');
+      check.addEventListener('change',function(event){
+        event.stopPropagation();input.disabled=!check.checked;
+        if(check.checked){input.value=1;selected[spec]=1;}else delete selected[spec];
+        input.setCustomValidity('');sync();
+      });
+      input.addEventListener('input',function(){
+        const n=Number(input.value),valid=Number.isSafeInteger(n)&&n>=1&&n<=99;
+        input.setCustomValidity(valid?'':'請輸入1至99的整數');
+        selected[spec]=valid?n:0;sync();
+      });
+      input.addEventListener('change',function(event){event.stopPropagation();if(!input.checkValidity())input.reportValidity();});
+      vrow.querySelectorAll('[data-step]').forEach(function(button){button.addEventListener('click',function(){
+        if(!check.checked){check.checked=true;input.disabled=false;input.value=1;selected[spec]=1;}
+        else {const n=Math.max(1,Math.min(99,(Number(input.value)||1)+Number(button.dataset.step)));input.value=n;selected[spec]=n;}
+        input.setCustomValidity('');sync();
+      });});
+    });
+    box.querySelector('.qeRemoveProduct').addEventListener('click',function(){delete cart[item.name];updateCart();});
+  });
+  messageBox.innerHTML=createMessage();
+}
+
+
+function renderCartPanelLegacy_(){
 
   cartItems.innerHTML = '';
 
@@ -6004,7 +6104,7 @@ function formatQueenaMoney_(amount){
 
 function createMessage(includeMoney){
 
-  const items = Object.values(cart);
+  const items = queenaCartLines_();
 
   if(items.length === 0){
     return '<strong>🛍️ 訂單確認</strong><br><br>還沒有加入商品 ♡';
@@ -6173,7 +6273,7 @@ document
 
 sendBtn.addEventListener('click', function(){
 
-  const items = Object.values(cart);
+  const items = queenaCartLines_();
 
   if(items.length === 0){
 
@@ -6192,7 +6292,7 @@ sendBtn.addEventListener('click', function(){
         }) || {};
 
       return (
-        !queenaValidSpec_(product,item.spec || '')
+        (!Number.isSafeInteger(Number(item.qty)) || Number(item.qty)<1 || Number(item.qty)>99 || !queenaValidSpec_(product,item.spec || ''))
       );
     });
 
@@ -7351,7 +7451,7 @@ function syncMobileCartBadge(){
 
   let total = 0;
 
-  Object.values(cart)
+  queenaCartLines_()
     .forEach(function(item){
       total += Number(item.qty) || 1;
     });
@@ -8606,7 +8706,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     const box=document.getElementById('checkoutShippingSummary');
     if(!box) return;
     let subtotal=0,unknown=false;
-    Object.values(cart || {}).forEach(function(item){
+    queenaCartLines_().forEach(function(item){
       const product=products.find(function(p){return p.name===item.name;}) || {};
       const price=parseQueenaPrice_(product.price,item.spec).amount;
       if(price===null)unknown=true;else subtotal+=Math.round(price*Number(item.qty)*100)/100;
@@ -8648,15 +8748,15 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   function refreshCheckoutSpecWarning(){
     const warning=document.getElementById('checkoutSpecWarning');
     if(!warning)return;
-    const missing=Object.values(cart || {}).filter(function(item){
+    const missing=queenaCartLines_().filter(function(item){
       const product=products.find(function(p){return p.name===item.name;});
-      return product && !queenaValidSpec_(product,item.spec || '');
+      return product && (!Number.isSafeInteger(Number(item.qty)) || Number(item.qty)<1 || Number(item.qty)>99 || !queenaValidSpec_(product,item.spec || ''));
     });
     warning.hidden=!missing.length;
     warning.textContent=missing.length?'尚有商品未選規格：'+missing.map(function(item){return item.name;}).join('、')+'。請返回商品清單選擇後再送出。':'';
   }
   document.getElementById('openCheckout').addEventListener('click',function(){
-    const items = Object.values(cart || {});
+    const items = queenaCartLines_();
     if(!items.length){ alert('請先加入商品');return; }
     setCheckoutView(form.hidden);
     document.getElementById('checkoutSummary').innerHTML = createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();
@@ -8669,10 +8769,10 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     syncReceiver();
     if(inFlight || queenaOrderInFlight) return;
     if(!form.reportValidity()){result.textContent='訂單尚未送出，請完成標示的必填欄位。';return;}
-    const items = Object.values(cart || {}).map(function(i){return {name:i.name,spec:i.spec || '',qty:Number(i.qty)};});
+    const items = queenaCartLines_().map(function(i){return {name:i.name,spec:i.spec || '',qty:Number(i.qty)};});
     if(!items.length){ alert('請先加入商品');return; }
     if(!products.length){ alert('商品資料尚未完成載入，請稍候再試');return; }
-    const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || !queenaValidSpec_(p,i.spec);});
+    const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || (!Number.isSafeInteger(Number(i.qty)) || Number(i.qty)<1 || Number(i.qty)>99 || !queenaValidSpec_(p,i.spec));});
     if(missing){ alert('請確認「'+missing.name+'」的規格及口味總數');setCheckoutView(false);renderCartPanel();cartItems.scrollIntoView({behavior:'smooth',block:'start'});return; }
     const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
     ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeArea','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
