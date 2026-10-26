@@ -4307,7 +4307,48 @@ html.shared-product-initial #queenaHomeEntry::after{
 <style>.cartQtyInput{width:56px;min-height:40px;text-align:center;border:1px solid #e5d4cd;border-radius:10px;font-size:16px;color:#5b433c;background:#fff;box-sizing:border-box}.mixFlavorGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mixFlavorGrid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5b433c}.mixFlavorGrid input{width:100%;min-height:40px;box-sizing:border-box;border:1px solid #e5d4cd;border-radius:8px;padding:6px;font-size:16px}.mixCountStatus{font-size:12px;line-height:1.6;color:#8f494d;margin:10px 0 0}@media(max-width:420px){.mixFlavorGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}</style><style>
 .qeVariants{width:100%;box-sizing:border-box}.qeVariantRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #eee4de}.qeVariantRow>label{display:flex;align-items:center;gap:9px;min-width:0;flex:1;font-size:14px;line-height:1.5}.qeVariantRow input[type=checkbox]{width:19px;height:19px;flex-shrink:0;accent-color:#96776b}.qeVariantRow small{display:block;font-size:12px;color:#9a7c70}.qeVariantQty{display:flex;align-items:center;gap:5px;flex-shrink:0}.qeVariantQty button{width:30px;height:34px;border:0;border-radius:50%;background:#faedcc;color:#775b4a;font-size:19px}.qeVariantQty input{width:48px;min-height:36px;box-sizing:border-box;border:1px solid #dfd1c8;border-radius:8px;text-align:center;font-size:16px;background:white}.qeVariantQty input:disabled{opacity:.4}.qeVariantQty input:invalid{border-color:#d33}.qeRemoveProduct{margin-top:12px;background:transparent;border:0;text-decoration:underline;color:#93796c;cursor:pointer}.qeVariants .cartSpecLabel{margin-bottom:6px}
 @media(max-width:480px){.qeVariants .qeVariantRow{gap:6px}.qeVariantRow>label{font-size:13px}.qeVariantQty button{width:26px}.qeVariantQty input{width:42px}}
-</style></head>
+</style><style>
+/* 浮動購物車：固定在手機畫面右下方，方便瀏覽時隨時開啟清單 */
+.floatingCartFab{
+  display:none;
+  position:fixed;
+  right:14px;
+  bottom:calc(82px + env(safe-area-inset-bottom));
+  z-index:210;
+  width:48px;
+  height:48px;
+  border:1px solid rgba(255,255,255,.9);
+  border-radius:50%;
+  background:#805f56;
+  color:#fff;
+  box-shadow:0 4px 14px rgba(70,45,38,.24);
+  align-items:center;
+  justify-content:center;
+  font-size:23px;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.floatingCartFab:active{transform:scale(.96)}
+.floatingCartFab .floatingCartBadge{
+  position:absolute;
+  top:-3px;
+  right:-3px;
+  min-width:18px;
+  height:18px;
+  padding:0 4px;
+  box-sizing:border-box;
+  border:2px solid #fff;
+  border-radius:999px;
+  background:#e95a79;
+  color:#fff;
+  font:700 10px/14px Arial,sans-serif;
+  text-align:center;
+}
+@media(max-width:1024px){
+  .mobileSite .floatingCartFab{display:flex}
+}
+</style>
+</head>
 
 <body>
 
@@ -4536,6 +4577,9 @@ html[data-queena-share="1"] #queenaHomeEntry{
       <b id="mCartBadge" class="mCartBadge">0</b>
     </button>
   </nav>
+  <button type="button" id="floatingCartBtn" class="floatingCartFab" aria-label="開啟購物車" title="開啟購物車">
+    🛒<span id="floatingCartBadge" class="floatingCartBadge" style="display:none">0</span>
+  </button>
 </div>
 
 <div class="shopTop">
@@ -6218,6 +6262,12 @@ function createMessage(includeMoney){
 // ==============================
 
 document
+  .getElementById('floatingCartBtn')
+  .addEventListener('click', function(){
+    document.getElementById('viewCart').click();
+  });
+
+document
   .getElementById('viewCart')
   .addEventListener('click', function(){
 
@@ -7459,6 +7509,14 @@ function syncMobileCartBadge(){
   badge.textContent = total;
   badge.style.display =
     total > 0 ? 'block' : 'none';
+
+  const floatingBadge =
+    document.getElementById('floatingCartBadge');
+  if(floatingBadge){
+    floatingBadge.textContent = total;
+    floatingBadge.style.display =
+      total > 0 ? 'block' : 'none';
+  }
 }
 
 function renderMobileApp(){
@@ -8796,7 +8854,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       receiptLines.push('',payload.shipping+'｜'+payload.payment);
       if(payload.payment==='LINE Pay')receiptLines.push('請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。');
       else if(payload.payment==='貨到付款')receiptLines.push('請將訂單編號傳給 Queena，方便確認。');
-      if(data.notification && !data.notification.accepted)receiptLines.push('訂單已存入試算表，請主動傳送訂單編號。');
+      if(data.notification && !data.notification.accepted)receiptLines.push('謝謝您 訂單已送出');
       result.textContent=receiptLines.join('\n');
       completedOrderId=data.orderId;completedBuyerPhone=payload.buyerPhone;
       receiptActions.hidden=false;
