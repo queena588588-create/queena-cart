@@ -4415,6 +4415,7 @@ html.shared-product-initial #queenaHomeEntry::after{
 #checkoutResult .checkoutSuccessTitle{display:block;margin:0 0 10px;font-size:clamp(25px,6vw,32px);font-weight:800;line-height:1.35;color:#18783c}
 #checkoutResult .checkoutSuccessOrder{display:block;margin:0 0 20px;font-size:clamp(20px,5vw,26px);font-weight:800;line-height:1.4;color:#594238;overflow-wrap:anywhere}
 </style>
+<style>.qeDeliveryInfo{font-size:12px;line-height:1.65;color:#826b58;background:#fff8ec;border-radius:8px;padding:6px 8px;margin:7px 0;overflow-wrap:anywhere}.cartProductText .qeDeliveryInfo{margin-top:10px}</style>
 </head>
 
 <body>
@@ -5474,6 +5475,7 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
             : ''
         ) +
 
+        (p.price?'<div class="price">'+escapeHtml(p.price)+'</div>':'')+queenaDeliveryHtml_(p)+
         '<div class="featuredActionRow">' +
 
           '<button type="button" class="featuredAddBtn ' +
@@ -5734,7 +5736,7 @@ function render(){
           escapeHtml(p.intro || '') +
         '</div>' +
 
-        priceHtml +
+        priceHtml + queenaDeliveryHtml_(p) +
 
         (
           p.albumUrl && /^https?:\/\//i.test(String(p.albumUrl).trim())
@@ -5853,7 +5855,7 @@ function updateCart(){
 
 
 // 商品配送規則：保留原始規格作為設定，選項排除配送說明。
-function queenaHomeFreight_(label){const m=String(label||'').trim().match(/^(?:宅配(?:運費)?|運費|宅配費|運送費)\s*[:：=]?\s*[$＄]?\s*(\d+(?:,\d{3})*)\s*元?$/);return m?Number(m[1].replace(/,/g,'')):null;}
+function queenaHomeFreight_(label){const m=String(label||'').trim().match(/^(?:[宅它]配(?:運費)?|運費|[宅它]配費|運送費)\s*[:：=]?\s*[$＄]?\s*(\d+(?:,\d{3})*)\s*元?$/);return m?Number(m[1].replace(/,/g,'')):null;}
 function queenaDeliveryMeta_(label){return /^(?:超商取貨付款|宅配|僅限宅配|宅配限定)$/.test(String(label||'').trim())||queenaHomeFreight_(label)!==null;}
 function queenaProductOptions_(p){return queenaSpecOptions_(p&&p.specs).filter(function(s){return !queenaDeliveryMeta_(s);});}
 function queenaCleanSelected_(spec){return String(spec||'').split('｜').filter(function(s){return !queenaDeliveryMeta_(s);}).join('｜');}
@@ -5862,17 +5864,20 @@ function queenaShippingPlan_(items,shipping){
  const split=shipping==='分開配送－7-11'||shipping==='分開配送－全家';
  if(['宅配','7-11','全家','分開配送－7-11','分開配送－全家'].indexOf(shipping)<0)throw new Error('請選擇正確配送方式');
  const home=items.filter(function(i){return !i.storeAllowed;}),store=items.filter(function(i){return i.storeAllowed;});
- if(!split&&shipping!=='宅配'&&home.length)throw new Error('含有只能宅配的商品，請改選全部宅配或分開配送');
+ if(!split&&shipping!=='宅配'&&home.length)throw new Error('含有只能宅配的商品，請勾選分次出貨並選擇超商');
+ if(!split&&shipping==='宅配'&&store.length)throw new Error('超商取貨付款商品只能選超商；混合商品請勾選分次出貨');
  if(split&&(!home.length||!store.length))throw new Error('只有混合宅配與超取商品時才需要分開配送');
- const groups=[];function add(method,list){const fee=method==='宅配'?list.reduce(function(n,i){return Math.max(n,Number(i.homeFee)||0);},0):40;groups.push({method:method,fee:fee,status:'未出貨',tracking:'',items:list.map(function(i){return {name:i.name,spec:i.spec||'',qty:i.qty};})});}
+ const groups=[];function add(method,list){const fee=method==='宅配'?list.reduce(function(n,i){return Math.max(n,Number(i.homeFee)||0);},0):40;groups.push({policyVersion:3,method:method,fee:fee,discount:split&&method!=='宅配'?40:0,status:'未出貨',tracking:'',items:list.map(function(i){return {name:i.name,spec:i.spec||'',qty:i.qty};})});}
  if(split){add('宅配',home);add(shipping.slice(5),store);}else add(shipping,items);
- return {groups:groups,fee:groups.reduce(function(n,g){return n+g.fee;},0),split:split,hasHome:split||shipping==='宅配'};
+ const gross=groups.reduce(function(n,g){return n+g.fee;},0),discount=groups.reduce(function(n,g){return n+(g.discount||0);},0);return {groups:groups,grossFee:gross,discount:discount,fee:gross-discount,split:split,hasHome:split||shipping==='宅配'};
 }
 function queenaFulfillmentStatus_(groups){if(groups.every(function(g){return g.status==='已取消';}))return '已取消';if(groups.every(function(g){return g.status==='已出貨';}))return '已出貨';if(groups.some(function(g){return g.status==='已出貨'||g.status==='部分出貨';}))return '部分出貨';if(groups.some(function(g){return /備貨/.test(g.status);}))return '備貨中';return '未出貨';}
+function queenaShippingDiscount_(groups){return (groups||[]).reduce(function(n,g){return n+(Number(g.discount)||0);},0);}
 
+function queenaDeliveryHtml_(p){const r=queenaDeliveryRule_(p);return '<div class="qeDeliveryInfo">'+(r.storeAllowed?'僅限超商取貨 · 超商運費 $40':'僅限宅配 · '+(r.homeFee?'宅配運費 $'+r.homeFee:'宅配免運'))+'</div>';}
 function queenaMixConfig_(p){
  const prices=queenaSpecOptions_(p.price), flavors=queenaProductOptions_(p);
- const bundles=prices.map(function(s){const m=s.match(/^(\d+)\s*(片|入|包|顆|個|瓶|袋)\s*[$＄]\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)$/);return m?{label:s,count:Number(m[1]),unit:m[2]}:null;});
+ const bundles=prices.map(function(s){const m=s.match(/^(\d+)\s*(片|入|包|顆|個|瓶|袋|隻|盒|件|雙|罐|條|套|組)\s*[$＄]\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)$/);return m?{label:s,count:Number(m[1]),unit:m[2]}:null;});
  return bundles.length>=1 && bundles.every(function(b){return b && b.count>0;}) && flavors.length && flavors.every(function(s){return !/[$＄]/.test(s);}) ? {bundles:bundles,flavors:flavors}:null;
 }
 function queenaMixRead_(p,spec){
@@ -6087,6 +6092,7 @@ function renderCartPanelLegacy_(){
       '</div>';
 
 
+    row.querySelector('.cartProductText').insertAdjacentHTML('beforeend',queenaDeliveryHtml_(product));
     const qtyInput=row.querySelector('.cartQtyInput');
     qtyInput.addEventListener('change',function(){
       const n=Number(qtyInput.value);if(!Number.isSafeInteger(n)||n<1||n>99){qtyInput.value=item.qty;alert('購買數量請輸入1至99的整數');return;}item.qty=n;updateCart();messageBox.innerHTML=createMessage();
@@ -6265,7 +6271,7 @@ function createMessage(includeMoney){
       priceHtml = '本期優惠 ♡';
     }
 
-    const meta = [];
+    const meta = [];const deliveryRule=queenaDeliveryRule_(product);meta.push(escapeHtml((deliveryRule.storeAllowed?'僅限超商取貨':'僅限宅配')+(deliveryRule.homeFee?' · 宅配運費 $'+deliveryRule.homeFee+'（結帳另計）':'')));
 
     if(item.spec){
       meta.push(escapeHtml(item.spec));
@@ -7078,11 +7084,11 @@ function openProductDetail(productName){
         '<div class="productDetailText">精選好物，想了解更多可以直接詢問 Queena ♡</div>' +
       '</div>';
 
-  const specsHtml = product.specs
+  const specsHtml = queenaProductOptions_(product).length
     ? '<div class="productDetailSection">' +
         '<div class="productDetailSectionTitle">規格／款式</div>' +
         '<div class="productDetailText">' +
-          mobileEscape(product.specs) +
+          mobileEscape(queenaProductOptions_(product).join('｜')) +
         '</div>' +
       '</div>'
     : '';
@@ -7103,7 +7109,7 @@ function openProductDetail(productName){
       '<h2 id="productDetailTitle" class="productDetailTitle">' +
         mobileEscape(product.name || '') +
       '</h2>' +
-      priceHtml +
+      priceHtml + queenaDeliveryHtml_(product) +
       introHtml +
       specsHtml +
       buyHtml +
@@ -7265,7 +7271,7 @@ function mobileProductCard(p, badgeText){
           mobileEscape(p.name || '') +
         '</div>' +
         intro +
-        price +
+        price + queenaDeliveryHtml_(p) +
 
         (
           p.albumUrl && /^https?:\/\//i.test(String(p.albumUrl).trim())
@@ -8719,7 +8725,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       <a class="checkoutLineLink" href="https://line.me/ti/p/aZ1M8UpSkD" target="_blank" rel="noopener noreferrer">📌加 Queena LINE 好友 ↗</a>
     </fieldset>
     <fieldset class="checkoutCard"><legend><span>02</span> 收件配送</legend>
-      <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option><option value="分開配送－7-11">分開配送：宅配＋7-11</option><option value="分開配送－全家">分開配送：宅配＋全家</option></select></label><p id="checkoutDeliveryHint" class="checkoutHint"></p>
+      <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option><option value="分開配送－7-11">分次出貨：宅配＋7-11</option><option value="分開配送－全家">分次出貨：宅配＋全家</option></select></label><p id="checkoutDeliveryHint" class="checkoutHint"></p><label id="splitShipmentsRow" class="checkoutCheck" hidden><input type="checkbox" name="splitShipments">我同意分次出貨（宅配＋超商取貨）</label>
       <label class="checkoutCheck"><input name="sameReceiver" type="checkbox" checked>收件人同訂購人</label>
       <div id="receiverFields" class="checkoutGrid" hidden>
         <label>收件人姓名<input name="receiver" required maxlength="40" autocomplete="shipping name" placeholder="請填收件人姓名"></label>
@@ -8854,9 +8860,12 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   function currentDeliveryPlan(){return queenaShippingPlan_(deliveryItems(),form.elements.shipping.value);}
   function syncDeliveryOptions(){
     const items=deliveryItems(),home=items.some(function(i){return !i.storeAllowed;}),store=items.some(function(i){return i.storeAllowed;});
-    Array.from(form.elements.shipping.options).forEach(function(o){const split=/^分開配送－/.test(o.value);o.disabled=split?!(home&&store):(o.value!=='宅配'&&home);o.hidden=o.disabled;});
-    if(form.elements.shipping.selectedOptions[0]&&form.elements.shipping.selectedOptions[0].disabled)form.elements.shipping.value='宅配';
-    const hint=document.getElementById('checkoutDeliveryHint');hint.textContent=home&&store?'含宅配限定商品，可全部宅配，或選擇分開配送。分開配送須填地址及超商門市，整筆使用轉帳或 LINE Pay。':home?'這張訂單的商品僅提供宅配。':'可選宅配、7-11 或全家。';
+    const mixed=home&&store;
+    Array.from(form.elements.shipping.options).forEach(function(o){const split=/^分開配送－/.test(o.value);o.disabled=mixed?!split:home?o.value!=='宅配':store?(split||o.value==='宅配'):o.value!=='宅配';o.hidden=o.disabled;});
+    if(!form.elements.shipping.selectedOptions[0]||form.elements.shipping.selectedOptions[0].disabled){const first=Array.from(form.elements.shipping.options).find(function(o){return !o.disabled;});if(first)form.elements.shipping.value=first.value;}
+    const consent=form.elements.splitShipments;document.getElementById('splitShipmentsRow').hidden=!mixed;consent.required=mixed;if(!mixed)consent.checked=false;
+    const hint=document.getElementById('checkoutDeliveryHint');hint.textContent=mixed?'商品需分為宅配與超商兩批配送。請勾選分次出貨，填寫地址及超商門市。結帳優惠折抵超商運費40元。':home?'這張訂單僅提供宅配，運費依商品設定計算。':store?'這張訂單僅提供7-11或全家超商取貨，運費40元。':'請先加入商品。';
+
   }
   function deliveryGroupSummary(plan){const wrap=document.createElement('div');plan.groups.forEach(function(g){const box=document.createElement('div');box.className='checkoutMoneyNote';const title=document.createElement('strong');title.textContent=g.method+'配送商品';box.appendChild(title);g.items.forEach(function(i){const row=document.createElement('div');row.textContent=i.name+(i.spec?'（'+i.spec+'）':'')+' ×'+i.qty;box.appendChild(row);});wrap.appendChild(box);});return wrap.innerHTML;}
 
@@ -8888,8 +8897,8 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     function moneyRow(label,value,total){return '<div class="checkoutMoneyRow'+(total?' total':'')+'"><span>'+label+'</span><strong>'+value+'</strong></div>';}
     box.innerHTML=moneyRow('商品小計',formatQueenaMoney_(subtotal)+(unknown?'＋待確認':''),false)+
       (discount?moneyRow('購物券','−'+formatQueenaMoney_(discount),false):'')+
-      plan.groups.map(function(g){return moneyRow(g.method+'運費',g.fee?formatQueenaMoney_(g.fee):'免運',false);}).join('')+moneyRow(unknown?'目前金額（含運）':'合計（含運）',unknown?'待確認':formatQueenaMoney_(subtotal-discount+fee),true)+
-      (unknown?'<div class="checkoutMoneyNote">優惠商品金額將由 Queena 確認。</div>':'')+deliveryGroupSummary(plan);
+      plan.groups.map(function(g){return moneyRow(g.method+'運費',g.fee?formatQueenaMoney_(g.fee):'免運',false);}).join('')+(plan.discount?moneyRow('優惠折抵超商運費','−'+formatQueenaMoney_(plan.discount),false):'')+moneyRow(unknown?'目前金額（含運）':'合計（含運）',unknown?'待確認':formatQueenaMoney_(subtotal-discount+fee),true)+
+      (unknown?'<div class="checkoutMoneyNote">優惠商品金額將由 Queena 確認。</div>':'')+(plan.discount?'<div class="checkoutMoneyNote">備註：1、優惠折抵超商運費 40元。</div>':'')+deliveryGroupSummary(plan);
   }
 
   function syncReceiver(){
@@ -8937,6 +8946,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();},0);});
   form.addEventListener('submit',async function(event){
     event.preventDefault();
+    if(inFlight || queenaOrderInFlight)return;const beforeCatalog=JSON.stringify(products.map(function(p){return [p.name,p.price,p.specs];}));submit.disabled=true;result.textContent='正在確認最新商品資料與運費…';try{if(window.queenaRefreshProductData)await window.queenaRefreshProductData();}catch(err){result.textContent='無法確認最新商品資料，訂單尚未送出，請稍後重試。';submit.disabled=false;return;}submit.disabled=false;result.textContent='';if(beforeCatalog!==JSON.stringify(products.map(function(p){return [p.name,p.price,p.specs];}))){renderCartPanel();toggleFields();result.textContent='商品資料已更新，請重新核對規格、金額與配送方式後再送出。';return;}
     toggleFields();syncReceiver();
     if(inFlight || queenaOrderInFlight) return;
     if(!form.reportValidity()){result.textContent='訂單尚未送出，請完成標示的必填欄位。';return;}
@@ -8948,6 +8958,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
     ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeArea','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
     if(payload.shipping==='宅配'){payload.storeName='';payload.storeArea='';}else if(!/^分開配送－/.test(payload.shipping)){payload.address='';}
+    payload.splitShipments=form.elements.splitShipments.checked;
     payload.sameReceiver=form.elements.sameReceiver.checked;
     payload.contactMethod=payload.lineId ? 'lineId' : 'phone';
     const fingerprint = JSON.stringify(payload);
@@ -8965,6 +8976,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       const receiptLines=['✅ 訂單已建立',data.orderId,'','商品小計：$'+Number(data.subtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認商品':'')];
       if(data.discount)receiptLines.push('購物券：−$'+data.discount);
       (data.shipments||[]).forEach(function(g){receiptLines.push(g.method+'運費：'+(g.fee?'$'+g.fee:'免運'));receiptLines.push(g.method+'商品：'+g.items.map(function(i){return i.name+' ×'+i.qty;}).join('、'));});
+      if(data.shippingDiscount)receiptLines.push('優惠折抵超商運費：−$'+data.shippingDiscount);
       if(typeof data.totalAmount==='number')receiptLines.push('合計（含運）：$'+Number(data.totalAmount).toLocaleString('zh-TW'));
       receiptLines.push('',payload.shipping+'｜'+payload.payment);
       if(payload.payment==='LINE Pay')receiptLines.push('請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。');
@@ -8991,7 +9003,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
             function updateCountdown(){const left=Math.max(0,deadline-Date.now());if(left===0){timer.textContent='30 分鐘匯款時間已到；逾時匯款請先聯絡 Queena 人工確認。';clearInterval(countdownTimer);return;}const mins=Math.floor(left/60000),secs=Math.floor(left%60000/1000);timer.textContent='請於 '+String(mins).padStart(2,'0')+':'+String(secs).padStart(2,'0')+' 內完成匯款';}
             updateCountdown();countdownTimer=setInterval(updateCountdown,1000);
           }else{
-            const note=document.createElement('div');note.textContent='商品優惠金額確認後再匯款，確認後再開始計算付款時間。宅配免運。';bankInfo.appendChild(note);bankInfo.hidden=false;
+            const note=document.createElement('div');note.textContent='商品優惠金額確認後再匯款，確認後再開始計算付款時間。運費依訂單確認明細計算。';bankInfo.appendChild(note);bankInfo.hidden=false;
           }
         }else{bankInfo.hidden=false;bankInfo.textContent='匯款資料尚未設定，請先加 LINE 聯絡 Queena。';}
       }
@@ -9073,7 +9085,7 @@ function orderSection(parent,name){const section=el('section',null,'qmCard');sec
 function customerCard(o,keys){const card=el('section',null,'qmOrderCard');
  const header=el('div',null,'qmCard qmOrderHeader'),info=el('div');info.append(el('span','訂單編號','qmEyebrow'),el('h3',o.orderId),el('p',date(o.createdAt),'qmHint'));const status=el('div',null,'qmStatusStack');[o.paymentStatus,o.shippingStatus,o.orderStatus].filter(Boolean).forEach(x=>status.appendChild(el('span',x,'qmBadge '+(/已付款|已收款|已完成/.test(x)?'good':/備貨|待|未/.test(x)?'warm':'rose'))));header.append(info,status);card.appendChild(header);
  const details=orderSection(card,'商品明細');o.items.forEach(i=>{const row=el('div',null,'qmItem'),info=el('div',null,'qmItemInfo');info.append(el('strong',i.name),el('small',(i.spec?i.spec+' · ':'')+'數量 '+i.qty));row.append(el('span','▧','qmItemMark'),info,el('strong',money(i.lineTotal),'qmItemPrice'));details.appendChild(row);});if(o.legacyDetails)details.appendChild(el('div',o.legacyDetails,'qmPre'));
- addMoney(details,'商品小計',o.subtotal);if(o.discount)addMoney(details,'購物券折抵',-o.discount);addMoney(details,o.shipping==='宅配'?'宅配運費':'超商運費',o.shippingFee);addMoney(details,'訂單總額（含運）',o.total,'qmTotal');if(o.receivedAmount!==null)addMoney(details,'Queena 已確認收款',o.receivedAmount);
+ addMoney(details,'商品小計',o.subtotal);if(o.discount)addMoney(details,'購物券折抵',-o.discount);if(o.shipments&&o.shipments.length){o.shipments.forEach(function(g){addMoney(details,g.method+'運費',g.fee);});const freightDiscount=queenaShippingDiscount_(o.shipments);if(freightDiscount)addMoney(details,'優惠折抵超商運費',-freightDiscount);}else addMoney(details,o.shipping==='宅配'?'宅配運費':'超商運費',o.shippingFee);addMoney(details,'訂單總額（含運）',o.total,'qmTotal');if(o.receivedAmount!==null)addMoney(details,'Queena 已確認收款',o.receivedAmount);
  if(o.notice)card.appendChild(el('p','商品處理說明\n'+o.notice,'qmAlert'));if(o.refunds.length){const refundBox=orderSection(card,'退款紀錄');o.refunds.forEach(r=>refundBox.appendChild(el('p',r.status+'｜'+money(r.amount)+(r.date?'｜'+r.date:'')+(r.note?'\n'+r.note:''),'qmPre')));const refunded=o.refunds.filter(r=>r.status==='已退款').reduce((n,r)=>n+r.amount,0);addMoney(refundBox,'已退款合計',refunded);}
  if(o.shipments&&o.shipments.length){const box=orderSection(card,'配送明細');o.shipments.forEach(function(g){const group=el('div',null,'qmItemEdit');group.append(el('h3',g.method+' · '+g.status),el('p',g.items.map(function(i){return i.name+(i.spec?'（'+i.spec+'）':'')+' ×'+i.qty;}).join('\n'),'qmPre'),el('p',g.region||'','qmHint'));if(g.tracking)group.appendChild(el('p','物流單號：'+g.tracking,'qmHint'));box.appendChild(group);});}
  const delivery=orderSection(card,'收件資訊');delivery.appendChild(el('p','配送：'+o.shipping+'\n收件人：'+o.receiver+'\n手機：'+o.phone+'\n地區：'+o.region+(o.tracking?'\n物流單號：'+o.tracking:''),'qmPre qmDelivery'));
@@ -9085,10 +9097,10 @@ function field(parent,text,key,value,type){const l=el('label',text),i=el(type===
 function select(parent,text,key,value,options){const l=el('label',text),s=el('select');s.name=key;const a=options.slice();if(value&&a.indexOf(value)<0)a.unshift(value);a.forEach(x=>{const option=el('option',x);option.value=x;s.appendChild(option)});s.value=value||a[0];l.appendChild(s);parent.appendChild(l);return s;}
 function adminLogin(){show('訂單管理');body.replaceChildren();const f=el('form',null,'qmCard qmPassword');f.appendChild(el('h3','管理者登入'));const input=field(f,'管理密碼','password','','password');input.required=true;input.autocomplete='current-password';const b=el('button','登入','qmBtn primary');b.type='submit';f.appendChild(b);const s=state(f);f.addEventListener('submit',async e=>{e.preventDefault();if(b.disabled)return;b.disabled=true;s.textContent='正在登入…';try{const d=await api('adminLogin',{password:input.value});input.value='';adminSession=d.session;await adminList();}catch(err){s.textContent=err.message;}finally{b.disabled=false;}});body.appendChild(f);body.appendChild(el('p','管理者專用 · 請輸入你設定的管理密碼。登入有效期約 30 分鐘。','qmHint'));}
 async function adminList(){if(!adminSession){adminLogin();return;}show('訂單管理');body.replaceChildren();const f=el('form',null,'qmActions'),input=el('input');input.type='search';input.placeholder='搜尋訂單編號、姓名或手機';input.value=adminQuery;input.setAttribute('aria-label','搜尋訂單');const search=el('button','搜尋','qmBtn');search.type='submit';f.append(input,search);f.addEventListener('submit',e=>{e.preventDefault();adminQuery=input.value;adminList();});body.appendChild(f);body.appendChild(btn('登出',async()=>{try{await api('adminLogout',{session:adminSession});}catch(e){}adminSession='';adminLogin();}));const s=state(body);s.textContent='正在載入訂單…';try{const d=await api('adminList',{session:adminSession,query:adminQuery});s.textContent='共 '+d.matched+' 筆符合，顯示最近 '+d.orders.length+' 筆。';d.orders.forEach(o=>{const card=el('section',null,'qmCard');card.append(el('h3',o.orderId),el('p',date(o.createdAt)+'\n'+o.buyerName+'｜'+o.buyerPhone+'\n'+money(o.total)+'｜'+o.paymentStatus+'｜'+o.shippingStatus,'qmPre'));card.appendChild(btn('編輯訂單',()=>adminEdit(o),true));body.appendChild(card);});}catch(e){s.textContent=e.message;if(/登入/.test(e.message))adminSession='';}}
-function adminEdit(o){currentEdit=o;show('編輯訂單');body.replaceChildren();const top=el('div',null,'qmActions');top.appendChild(btn('← 返回訂單列表',adminList));body.appendChild(top);const f=el('form'),base=el('section',null,'qmCard');base.append(el('h3',o.orderId),el('p','建立時間：'+date(o.createdAt),'qmHint'));base.appendChild(el('h3','訂購人與配送資訊','qmSectionTitle'));const grid=el('div',null,'qmGrid');base.appendChild(grid);
+function adminEdit(o){currentEdit=o;show('編輯訂單');body.replaceChildren();const top=el('div',null,'qmActions');top.appendChild(btn('← 返回訂單列表',adminList));body.appendChild(top);const f=el('form'),base=el('section',null,'qmCard');base.append(el('h3',o.orderId),el('p','建立時間：'+date(o.createdAt),'qmHint'));base.appendChild(el('h3','訂購人與配送資訊','qmSectionTitle'));if(o.shipments&&o.shipments.length){o.shipments.forEach(function(g){addMoney(base,g.method+'運費',g.fee);});const freightDiscount=queenaShippingDiscount_(o.shipments);if(freightDiscount)addMoney(base,'優惠折抵超商運費',-freightDiscount);addMoney(base,'訂單總額（含運）',o.total,'qmTotal');}const grid=el('div',null,'qmGrid');base.appendChild(grid);
  ['buyerName','buyerPhone','receiver','phone'].forEach((k,i)=>{const input=field(grid,['訂購人姓名','訂購人手機','收件人姓名','收件人手機'][i],k,o[k],i%2?'tel':'text');input.required=true;if(i%2)input.pattern='09[0-9]{8}';});
  const shipping=select(grid,'配送方式','shipping',o.shipping,['宅配','7-11','全家','分開配送－7-11','分開配送－全家']),payment=select(grid,'付款方式','paymentMethod',o.paymentMethod,['銀行轉帳','LINE Pay','貨到付款']);field(grid,'宅配地址','address',o.address);field(grid,'超商縣市／區','storeArea',o.storeArea);field(grid,'超商門市名稱','storeName',o.storeName);field(grid,'物流單號','tracking',o.tracking);f.appendChild(base);
- const productsBox=el('section',null,'qmCard');productsBox.appendChild(el('h3','商品明細','qmSectionTitle'));productsBox.appendChild(el('p','可更改商品、規格、數量及議定單價；單價留白表示待確認。宅配免運，超商運費 $40。','qmHint'));const itemRows=el('div');productsBox.appendChild(itemRows);let replacingLegacy=false;
+ const productsBox=el('section',null,'qmCard');productsBox.appendChild(el('h3','商品明細','qmSectionTitle'));productsBox.appendChild(el('p','可更改商品、規格、數量及議定單價；單價留白表示待確認。宅配依商品運費設定，超商運費 $40；新混合訂單折抵超商運費 $40。','qmHint'));const itemRows=el('div');productsBox.appendChild(itemRows);let replacingLegacy=false;
  function itemRow(item){const row=el('div',null,'qmItemEdit'),g=el('div',null,'qmGrid');row.appendChild(g);const n=field(g,'商品名稱','itemName',item.name);n.required=true;n.maxLength=200;n.parentElement.classList.add('qmWide');const spec=field(g,'規格','itemSpec',item.spec);spec.maxLength=1500;spec.parentElement.classList.add('qmWide');const q=field(g,'數量','itemQty',item.qty,'number');q.required=true;q.min=1;q.max=99;q.step=1;const u=field(g,'單價','itemPrice',item.unitPrice,'number');u.min=0;u.step='0.01';row.appendChild(btn('移除此項',()=>row.remove()));itemRows.appendChild(row);}
  if(o.items.length)o.items.forEach(itemRow);else{productsBox.appendChild(el('p','舊訂單明細：\n'+o.legacyDetails,'qmPre'));productsBox.appendChild(el('p','若新增商品，請把這張訂單的所有商品完整填入，才會取代舊明細。未新增則保留舊明細。','qmAlert'));}
  productsBox.appendChild(btn('＋ 新增商品',()=>{replacingLegacy=true;itemRow({name:'',spec:'',qty:1,unitPrice:null});}));field(productsBox,'購物券／議定折抵金額','discount',o.discount,'number').step='0.01';f.appendChild(productsBox);
@@ -9110,5 +9122,25 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
 })();
 </script>
 
+<script>// Seed is only a fast first paint. Refresh the actual catalog once, then before checkout.
+(function(){
+ let running=null;
+ window.queenaRefreshProductData=function(){
+  if(running)return running;
+  running=apiGet('products').then(function(data){
+   if(!data||!Array.isArray(data.products)||!data.products.length)throw new Error('商品資料尚未讀取完成');
+   const changed=JSON.stringify(products)!==JSON.stringify(data.products);
+   if(changed){products=data.products;
+    [buildCategories,renderFeatured,render].forEach(function(fn){try{fn();}catch(e){}});
+    try{if(typeof renderMobileApp==='function')renderMobileApp();}catch(e){}
+    try{if(typeof window.queenaRenderHomeHighlights==='function')window.queenaRenderHomeHighlights();}catch(e){}
+    const items=document.getElementById('cartItems');if(items)items.dispatchEvent(new Event('change',{bubbles:true}));
+   }
+   return data;
+  }).finally(function(){running=null;});return running;
+ };
+ window.queenaRefreshProductData().catch(function(){/* Keep visible seed; checkout retries and blocks if unreadable. */});
+})();
+</script>
 </body>
 </html>
