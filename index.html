@@ -4315,13 +4315,13 @@ html.shared-product-initial #queenaHomeEntry::after{
   right:14px;
   bottom:calc(82px + env(safe-area-inset-bottom));
   z-index:210;
-  width:48px;
-  height:48px;
-  border:1px solid rgba(255,255,255,.9);
+  width:54px;
+  height:54px;
+  border:2px solid #fff;
   border-radius:50%;
-  background:#805f56;
+  background:#e85f86;
   color:#fff;
-  box-shadow:0 4px 14px rgba(70,45,38,.24);
+  box-shadow:0 5px 16px rgba(205,55,99,.38),0 0 0 2px rgba(255,255,255,.8);
   align-items:center;
   justify-content:center;
   font-size:23px;
@@ -4333,19 +4333,71 @@ html.shared-product-initial #queenaHomeEntry::after{
   position:absolute;
   top:-3px;
   right:-3px;
-  min-width:18px;
-  height:18px;
+  min-width:20px;
+  height:20px;
   padding:0 4px;
   box-sizing:border-box;
   border:2px solid #fff;
   border-radius:999px;
-  background:#e95a79;
-  color:#fff;
-  font:700 10px/14px Arial,sans-serif;
+  background:#ffd85e;
+  color:#553b20;
+  font:800 10px/16px Arial,sans-serif;
   text-align:center;
 }
 @media(max-width:1024px){
   .mobileSite .floatingCartFab{display:flex}
+}
+</style>
+<style>
+/* 購物車三種下單方式：同一組並排色塊，清空清單仍獨立 */
+.cartActionGrid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  margin:14px 0 12px;
+  align-items:stretch;
+}
+.cartActionGrid #sendBtn,
+.cartActionGrid #openCheckout,
+.cartActionGrid .lineFriendAddBtn{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  min-height:78px;
+  height:100%;
+  margin:0;
+  padding:9px 6px;
+  border:0;
+  border-radius:15px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  font-size:12px;
+  line-height:1.35;
+  font-weight:800;
+}
+.cartActionGrid #sendBtn{background:#06c755!important;color:#fff!important}
+.cartActionGrid #openCheckout{background:#ffdf78!important;color:#59421f!important}
+.cartActionGrid #lineFriendPrompt{
+  display:contents!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+.cartActionGrid .lineFriendAddBtn{
+  background:#ee91ad!important;
+  color:#fff!important;
+  text-decoration:none;
+}
+@media(max-width:360px){
+  .cartActionGrid{gap:6px}
+  .cartActionGrid #sendBtn,
+  .cartActionGrid #openCheckout,
+  .cartActionGrid .lineFriendAddBtn{font-size:11px;padding:8px 4px;min-height:74px}
 }
 </style>
 </head>
@@ -8664,6 +8716,17 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     <p id="transferReportStatus" role="status" aria-live="polite"></p>
   </section>`;
   panel.insertBefore(wrap, clearButton);
+
+  // 將三個操作集中在一起；結帳表單仍留在原容器，清單清除鈕保持獨立。
+  const actionGrid = document.createElement('div');
+  actionGrid.className = 'cartActionGrid';
+  actionGrid.setAttribute('role', 'group');
+  actionGrid.setAttribute('aria-label', '選擇下單方式');
+  panel.insertBefore(actionGrid, wrap);
+  actionGrid.appendChild(document.getElementById('sendBtn'));
+  actionGrid.appendChild(document.getElementById('lineFriendPrompt'));
+  actionGrid.appendChild(document.getElementById('openCheckout'));
+
   const style = document.createElement('style');
   style.textContent = `#checkoutForm{padding:24px 0 8px;text-align:left;color:#51443d;line-height:1.6}
 #checkoutForm .checkoutIntro{margin:0 4px 26px}
