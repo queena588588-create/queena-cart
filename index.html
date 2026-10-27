@@ -5853,10 +5853,11 @@ function updateCart(){
 
 
 // 商品配送規則：保留原始規格作為設定，選項排除配送說明。
-function queenaDeliveryMeta_(label){return /^(?:超商取貨付款|宅配(?:\s*[$＄]\s*\d[\d,]*)?|僅限宅配|宅配限定)$/.test(String(label||'').trim());}
+function queenaHomeFreight_(label){const m=String(label||'').trim().match(/^(?:宅配(?:運費)?|運費|宅配費|運送費)\s*[:：=]?\s*[$＄]?\s*(\d+(?:,\d{3})*)\s*元?$/);return m?Number(m[1].replace(/,/g,'')):null;}
+function queenaDeliveryMeta_(label){return /^(?:超商取貨付款|宅配|僅限宅配|宅配限定)$/.test(String(label||'').trim())||queenaHomeFreight_(label)!==null;}
 function queenaProductOptions_(p){return queenaSpecOptions_(p&&p.specs).filter(function(s){return !queenaDeliveryMeta_(s);});}
 function queenaCleanSelected_(spec){return String(spec||'').split('｜').filter(function(s){return !queenaDeliveryMeta_(s);}).join('｜');}
-function queenaDeliveryRule_(p){const a=queenaSpecOptions_(p&&p.specs);let fee=0;a.forEach(function(s){const m=s.match(/^宅配\s*[$＄]\s*(\d[\d,]*)$/);if(m)fee=Math.max(fee,Number(m[1].replace(/,/g,'')));});return {storeAllowed:a.indexOf('超商取貨付款')>=0,homeFee:fee};}
+function queenaDeliveryRule_(p){const a=queenaSpecOptions_(p&&p.specs);let fee=0;a.forEach(function(s){const n=queenaHomeFreight_(s);if(n!==null)fee=Math.max(fee,n);});return {storeAllowed:a.indexOf('超商取貨付款')>=0,homeFee:fee};}
 function queenaShippingPlan_(items,shipping){
  const split=shipping==='分開配送－7-11'||shipping==='分開配送－全家';
  if(['宅配','7-11','全家','分開配送－7-11','分開配送－全家'].indexOf(shipping)<0)throw new Error('請選擇正確配送方式');
