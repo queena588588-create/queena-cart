@@ -5852,10 +5852,27 @@ function updateCart(){
 
 
 
+// 商品配送規則：保留原始規格作為設定，選項排除配送說明。
+function queenaDeliveryMeta_(label){return /^(?:超商取貨付款|宅配(?:\s*[$＄]\s*\d[\d,]*)?|僅限宅配|宅配限定)$/.test(String(label||'').trim());}
+function queenaProductOptions_(p){return queenaSpecOptions_(p&&p.specs).filter(function(s){return !queenaDeliveryMeta_(s);});}
+function queenaCleanSelected_(spec){return String(spec||'').split('｜').filter(function(s){return !queenaDeliveryMeta_(s);}).join('｜');}
+function queenaDeliveryRule_(p){const a=queenaSpecOptions_(p&&p.specs);let fee=0;a.forEach(function(s){const m=s.match(/^宅配\s*[$＄]\s*(\d[\d,]*)$/);if(m)fee=Math.max(fee,Number(m[1].replace(/,/g,'')));});return {storeAllowed:a.indexOf('超商取貨付款')>=0,homeFee:fee};}
+function queenaShippingPlan_(items,shipping){
+ const split=shipping==='分開配送－7-11'||shipping==='分開配送－全家';
+ if(['宅配','7-11','全家','分開配送－7-11','分開配送－全家'].indexOf(shipping)<0)throw new Error('請選擇正確配送方式');
+ const home=items.filter(function(i){return !i.storeAllowed;}),store=items.filter(function(i){return i.storeAllowed;});
+ if(!split&&shipping!=='宅配'&&home.length)throw new Error('含有只能宅配的商品，請改選全部宅配或分開配送');
+ if(split&&(!home.length||!store.length))throw new Error('只有混合宅配與超取商品時才需要分開配送');
+ const groups=[];function add(method,list){const fee=method==='宅配'?list.reduce(function(n,i){return Math.max(n,Number(i.homeFee)||0);},0):40;groups.push({method:method,fee:fee,status:'未出貨',tracking:'',items:list.map(function(i){return {name:i.name,spec:i.spec||'',qty:i.qty};})});}
+ if(split){add('宅配',home);add(shipping.slice(5),store);}else add(shipping,items);
+ return {groups:groups,fee:groups.reduce(function(n,g){return n+g.fee;},0),split:split,hasHome:split||shipping==='宅配'};
+}
+function queenaFulfillmentStatus_(groups){if(groups.every(function(g){return g.status==='已取消';}))return '已取消';if(groups.every(function(g){return g.status==='已出貨';}))return '已出貨';if(groups.some(function(g){return g.status==='已出貨'||g.status==='部分出貨';}))return '部分出貨';if(groups.some(function(g){return /備貨/.test(g.status);}))return '備貨中';return '未出貨';}
+
 function queenaMixConfig_(p){
- const prices=queenaSpecOptions_(p.price), flavors=queenaSpecOptions_(p.specs);
+ const prices=queenaSpecOptions_(p.price), flavors=queenaProductOptions_(p);
  const bundles=prices.map(function(s){const m=s.match(/^(\d+)\s*(片|入|包|顆|個|瓶|袋)\s*[$＄]\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)$/);return m?{label:s,count:Number(m[1]),unit:m[2]}:null;});
- return bundles.length>1 && bundles.every(function(b){return b && b.count>0;}) && flavors.length && flavors.every(function(s){return !/[$＄]/.test(s);}) ? {bundles:bundles,flavors:flavors}:null;
+ return bundles.length>=1 && bundles.every(function(b){return b && b.count>0;}) && flavors.length && flavors.every(function(s){return !/[$＄]/.test(s);}) ? {bundles:bundles,flavors:flavors}:null;
 }
 function queenaMixRead_(p,spec){
  const c=queenaMixConfig_(p);if(!c)return null;
@@ -5864,8 +5881,9 @@ function queenaMixRead_(p,spec){
  return {config:c,bundle:b,counts:counts,sum:sum,valid:valid && sum===b.count};
 }
 function queenaValidSpec_(p,spec){
+ spec=queenaCleanSelected_(spec);
  if(queenaMixConfig_(p))return queenaMixRead_(p,spec).valid;
- const prices=queenaPriceChoices_(p),opts=queenaSpecOptions_(p.specs);
+ const prices=queenaPriceChoices_(p),opts=queenaProductOptions_(p);
  if(prices.length>1){
    const parts=String(spec||'').split('｜');
    if(!prices.some(function(x){return x.label===parts[0];}))return false;
@@ -5875,7 +5893,7 @@ function queenaValidSpec_(p,spec){
 }
 function queenaPriceChoices_(p){return queenaSpecOptions_(p&&p.price).map(function(label){const m=label.match(/^(.*?)\s*[$＄]\s*(\d[\d,]*(?:\.\d{1,2})?)$/);return m?{label:label,amount:Number(m[2].replace(/,/g,''))}:null;}).filter(Boolean);}
 
-function getProductSpecs(product){return queenaSpecOptions_(product && product.specs);}
+function getProductSpecs(product){return queenaProductOptions_(product);}
 
 
 // V12: selected variants become independent order lines, with no client prices.
@@ -6075,13 +6093,13 @@ function renderCartPanelLegacy_(){
     const mix=queenaMixRead_(product,item.spec);
     if(mix){
       const box=row.querySelector('.cartSpecBox');
-      box.innerHTML='<div class="cartSpecLabel">片數／價格（每組）</div><div class="cartSpecChoices">'+mix.config.bundles.map(function(b,i){return '<button type="button" class="cartSpecBtn '+(mix.bundle===b?'active':'')+'" data-bundle="'+i+'">'+escapeHtml(b.label)+'</button>';}).join('')+'</div><div class="cartSpecLabel" style="margin-top:14px">每組口味分配</div><div class="mixFlavorGrid">'+mix.config.flavors.map(function(f,i){return '<label>'+escapeHtml(f)+'<input type="number" inputmode="numeric" min="0" step="1" data-flavor="'+i+'" value="'+(mix.counts[f]||0)+'"></label>';}).join('')+'</div><p class="mixCountStatus" aria-live="polite"></p>';
+      box.innerHTML='<div class="cartSpecLabel">組合／價格（每組）</div><div class="cartSpecChoices">'+mix.config.bundles.map(function(b,i){return '<button type="button" class="cartSpecBtn '+(mix.bundle===b?'active':'')+'" data-bundle="'+i+'">'+escapeHtml(b.label)+'</button>';}).join('')+'</div><div class="cartSpecLabel" style="margin-top:14px">每組口味分配</div><div class="mixFlavorGrid">'+mix.config.flavors.map(function(f,i){return '<label>'+escapeHtml(f)+'<input type="number" inputmode="numeric" min="0" step="1" data-flavor="'+i+'" value="'+(mix.counts[f]||0)+'"></label>';}).join('')+'</div><p class="mixCountStatus" aria-live="polite"></p>';
       let chosen=mix.bundle,counts=mix.counts;
       function saveMix(){
         item.spec=(chosen?chosen.label:'')+mix.config.flavors.filter(function(f){return counts[f]>0;}).map(function(f){return '｜'+f+'×'+counts[f];}).join('');
         if(box.querySelector('input:invalid'))item.spec+='｜數量格式錯誤';
         const sum=Object.values(counts).reduce(function(a,b){return a+b;},0),target=chosen?chosen.count:0;
-        box.querySelector('.mixCountStatus').textContent=chosen?'已分配 '+sum+'／'+target+chosen.unit+(sum===target?' ✓':sum<target?'，還差 '+(target-sum)+chosen.unit:'，多了 '+(sum-target)+chosen.unit):'請先選擇片數／價格';
+        box.querySelector('.mixCountStatus').textContent=chosen?'已分配 '+sum+'／'+target+chosen.unit+(sum===target?' ✓':sum<target?'，還差 '+(target-sum)+chosen.unit:'，多了 '+(sum-target)+chosen.unit):'請先選擇組合／價格';
         messageBox.innerHTML=createMessage();
       }
       box.querySelectorAll('[data-bundle]').forEach(function(btn){btn.addEventListener('click',function(){chosen=mix.config.bundles[Number(btn.dataset.bundle)];box.querySelectorAll('[data-bundle]').forEach(function(b){b.classList.toggle('active',b===btn);});saveMix();});});
@@ -6185,7 +6203,7 @@ function queenaSpecOptions_(raw){
   return protectedText.split(/[｜|,，、\n\r;/]+/).map(function(value){return value.replace(/\u0001/g,',').trim();}).filter(function(value,index,list){return value && list.indexOf(value)===index;});
 }
 function queenaPriceValue_(basePrice, selectedSpec){
-  const spec=String(selectedSpec || '').trim();
+  const spec=queenaCleanSelected_(String(selectedSpec || '').trim());
   const amounts=Array.from(spec.matchAll(/(?:NT\$|NTD\s*|[$＄])\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi)).map(function(m){return Number(m[1].replace(/,/g,''));});
   const firstLabel=spec.split('｜')[0].trim();
   const fixedBundle=firstLabel.match(/^\d+\s*(?:盒|包|組|袋|瓶|套|件|顆|罐|入)\s*(?:[:：=]\s*)?[$＄]?\s*(\d{2,}(?:,\d{3})*(?:\.\d{1,2})?)\s*元?$/);
@@ -8700,7 +8718,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       <a class="checkoutLineLink" href="https://line.me/ti/p/aZ1M8UpSkD" target="_blank" rel="noopener noreferrer">📌加 Queena LINE 好友 ↗</a>
     </fieldset>
     <fieldset class="checkoutCard"><legend><span>02</span> 收件配送</legend>
-      <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option></select></label>
+      <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option><option value="分開配送－7-11">分開配送：宅配＋7-11</option><option value="分開配送－全家">分開配送：宅配＋全家</option></select></label><p id="checkoutDeliveryHint" class="checkoutHint"></p>
       <label class="checkoutCheck"><input name="sameReceiver" type="checkbox" checked>收件人同訂購人</label>
       <div id="receiverFields" class="checkoutGrid" hidden>
         <label>收件人姓名<input name="receiver" required maxlength="40" autocomplete="shipping name" placeholder="請填收件人姓名"></label>
@@ -8831,14 +8849,25 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     }catch(err){status.textContent='回報未送出：'+err.message;button.disabled=false;button.textContent='我已轉帳';}
   });
   let inFlight = false, requestId = '', lastPayload = '';
+  function deliveryItems(){return queenaCartLines_().map(function(i){const p=products.find(function(p){return p.name===i.name;})||{};return Object.assign({},i,{spec:queenaCleanSelected_(i.spec)},queenaDeliveryRule_(p));});}
+  function currentDeliveryPlan(){return queenaShippingPlan_(deliveryItems(),form.elements.shipping.value);}
+  function syncDeliveryOptions(){
+    const items=deliveryItems(),home=items.some(function(i){return !i.storeAllowed;}),store=items.some(function(i){return i.storeAllowed;});
+    Array.from(form.elements.shipping.options).forEach(function(o){const split=/^分開配送－/.test(o.value);o.disabled=split?!(home&&store):(o.value!=='宅配'&&home);o.hidden=o.disabled;});
+    if(form.elements.shipping.selectedOptions[0]&&form.elements.shipping.selectedOptions[0].disabled)form.elements.shipping.value='宅配';
+    const hint=document.getElementById('checkoutDeliveryHint');hint.textContent=home&&store?'含宅配限定商品，可全部宅配，或選擇分開配送。分開配送須填地址及超商門市，整筆使用轉帳或 LINE Pay。':home?'這張訂單的商品僅提供宅配。':'可選宅配、7-11 或全家。';
+  }
+  function deliveryGroupSummary(plan){const wrap=document.createElement('div');plan.groups.forEach(function(g){const box=document.createElement('div');box.className='checkoutMoneyNote';const title=document.createElement('strong');title.textContent=g.method+'配送商品';box.appendChild(title);g.items.forEach(function(i){const row=document.createElement('div');row.textContent=i.name+(i.spec?'（'+i.spec+'）':'')+' ×'+i.qty;box.appendChild(row);});wrap.appendChild(box);});return wrap.innerHTML;}
+
   function toggleFields(){
-    const home = form.elements.shipping.value === '宅配';
+    syncDeliveryOptions();
+    const home = form.elements.shipping.value === '宅配',split=/^分開配送－/.test(form.elements.shipping.value),hasHome=home||split;
     const codOption=Array.from(form.elements.payment.options).find(function(option){return option.value==='貨到付款';});
-    if(codOption){codOption.disabled=home;codOption.hidden=home;}
-    if(home && form.elements.payment.value==='貨到付款') form.elements.payment.value='銀行轉帳';
-    document.getElementById('homeFields').hidden = !home;
+    if(codOption){codOption.disabled=hasHome;codOption.hidden=hasHome;}
+    if(hasHome && form.elements.payment.value==='貨到付款') form.elements.payment.value='銀行轉帳';
+    document.getElementById('homeFields').hidden = !hasHome;
     document.getElementById('storeFields').hidden = home;
-    form.elements.address.required = home;
+    form.elements.address.required = hasHome;
     form.elements.storeName.required = !home;
     form.elements.storeArea.required = !home;
     document.getElementById('checkoutPaymentHint').hidden=form.elements.payment.value==='貨到付款';
@@ -8854,13 +8883,12 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       if(price===null)unknown=true;else subtotal+=Math.round(price*Number(item.qty)*100)/100;
     });
     const discount=hasQueenaCoupon() && subtotal>=500 ? 30 : 0;
-    const home=form.elements.shipping.value==='宅配';
-    const fee=home ? 0 : 40;
+    syncDeliveryOptions();let plan;try{plan=currentDeliveryPlan();}catch(e){box.textContent=e.message;return;}const fee=plan.fee;
     function moneyRow(label,value,total){return '<div class="checkoutMoneyRow'+(total?' total':'')+'"><span>'+label+'</span><strong>'+value+'</strong></div>';}
     box.innerHTML=moneyRow('商品小計',formatQueenaMoney_(subtotal)+(unknown?'＋待確認':''),false)+
       (discount?moneyRow('購物券','−'+formatQueenaMoney_(discount),false):'')+
-      moneyRow(home?'宅配運費':'超商運費',home?'免運':formatQueenaMoney_(fee),false)+moneyRow(unknown?'目前金額（含運）':'合計（含運）',unknown?'待確認':formatQueenaMoney_(subtotal-discount+fee),true)+
-      (unknown?'<div class="checkoutMoneyNote">優惠商品金額將由 Queena 確認。</div>':'');
+      plan.groups.map(function(g){return moneyRow(g.method+'運費',g.fee?formatQueenaMoney_(g.fee):'免運',false);}).join('')+moneyRow(unknown?'目前金額（含運）':'合計（含運）',unknown?'待確認':formatQueenaMoney_(subtotal-discount+fee),true)+
+      (unknown?'<div class="checkoutMoneyNote">優惠商品金額將由 Queena 確認。</div>':'')+deliveryGroupSummary(plan);
   }
 
   function syncReceiver(){
@@ -8900,7 +8928,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   document.getElementById('openCheckout').addEventListener('click',function(){
     const items = queenaCartLines_();
     if(!items.length){ alert('請先加入商品');return; }
-    setCheckoutView(form.hidden);
+    setCheckoutView(form.hidden);toggleFields();
     document.getElementById('checkoutSummary').innerHTML = createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();
     if(!form.hidden) form.scrollIntoView({behavior:'smooth',block:'start'});
   });
@@ -8908,17 +8936,17 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();},0);});
   form.addEventListener('submit',async function(event){
     event.preventDefault();
-    syncReceiver();
+    toggleFields();syncReceiver();
     if(inFlight || queenaOrderInFlight) return;
     if(!form.reportValidity()){result.textContent='訂單尚未送出，請完成標示的必填欄位。';return;}
-    const items = queenaCartLines_().map(function(i){return {name:i.name,spec:i.spec || '',qty:Number(i.qty)};});
+    const items = queenaCartLines_().map(function(i){return {name:i.name,spec:queenaCleanSelected_(i.spec || ''),qty:Number(i.qty)};});
     if(!items.length){ alert('請先加入商品');return; }
     if(!products.length){ alert('商品資料尚未完成載入，請稍候再試');return; }
     const missing = items.find(function(i){const p=products.find(function(p){return p.name===i.name;});return !p || (!Number.isSafeInteger(Number(i.qty)) || Number(i.qty)<1 || Number(i.qty)>99 || !queenaValidSpec_(p,i.spec));});
     if(missing){ alert('請確認「'+missing.name+'」的規格及口味總數');setCheckoutView(false);renderCartPanel();cartItems.scrollIntoView({behavior:'smooth',block:'start'});return; }
     const payload = {items:items,coupon:hasQueenaCoupon(),consent:true};
     ['buyerName','buyerPhone','receiver','phone','shipping','address','storeName','storeArea','payment','lineId','lineName','note'].forEach(function(k){payload[k]=form.elements[k].value.trim();});
-    if(payload.shipping==='宅配'){payload.storeName='';payload.storeArea='';}else{payload.address='';}
+    if(payload.shipping==='宅配'){payload.storeName='';payload.storeArea='';}else if(!/^分開配送－/.test(payload.shipping)){payload.address='';}
     payload.sameReceiver=form.elements.sameReceiver.checked;
     payload.contactMethod=payload.lineId ? 'lineId' : 'phone';
     const fingerprint = JSON.stringify(payload);
@@ -8935,7 +8963,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       window.qmCompleteOrderAccess(requestId,data.orderId);
       const receiptLines=['✅ 訂單已建立',data.orderId,'','商品小計：$'+Number(data.subtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認商品':'')];
       if(data.discount)receiptLines.push('購物券：−$'+data.discount);
-      receiptLines.push(payload.shipping==='宅配'?'宅配運費：免運':'超商運費：$'+data.shippingFee);
+      (data.shipments||[]).forEach(function(g){receiptLines.push(g.method+'運費：'+(g.fee?'$'+g.fee:'免運'));receiptLines.push(g.method+'商品：'+g.items.map(function(i){return i.name+' ×'+i.qty;}).join('、'));});
       if(typeof data.totalAmount==='number')receiptLines.push('合計（含運）：$'+Number(data.totalAmount).toLocaleString('zh-TW'));
       receiptLines.push('',payload.shipping+'｜'+payload.payment);
       if(payload.payment==='LINE Pay')receiptLines.push('請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。');
@@ -9036,7 +9064,7 @@ function phoneLookupForm(){
  const f=el('form',null,'qmCard'),label=el('label','訂購人手機號碼'),input=el('input');input.type='tel';input.inputMode='tel';input.name='lookupPhone';input.id='qmLookupPhone';input.placeholder='09 開頭，共 10 碼';input.pattern='09[0-9]{8}';input.maxLength=10;input.required=true;input.autocomplete='tel';label.appendChild(input);f.appendChild(el('h3','查詢我的訂單','qmSectionTitle'));f.appendChild(label);const b=el('button','查詢訂單','qmBtn primary');b.type='submit';f.appendChild(b);f.appendChild(el('p','請輸入訂購人手機號碼，即可查詢訂單明細、付款與出貨進度','qmHint'));const status=state(f);
  f.addEventListener('submit',async function(e){e.preventDefault();if(!f.reportValidity()||b.disabled)return;const seq=++customerSeq;b.disabled=true;status.textContent='正在查詢…';const summary=document.getElementById('qmLookupSummary');if(summary)summary.textContent='';body.querySelectorAll('.qmOrderCard').forEach(x=>x.remove());try{const data=await api('customerPhone',{phone:input.value.trim()});if(seq!==customerSeq||modal.hidden||title.textContent!=='我的訂單')return;status.textContent=data.orders.length?'找到 '+data.matched+' 筆訂單'+(data.matched>100?'，顯示最近 100 筆':'')+'。訂單相關問題或意見反應':'請聯絡 Queena。';data.orders.forEach(o=>customerCard(o,[]));}catch(err){if(seq===customerSeq)status.textContent=err.message;}finally{b.disabled=false;}});return f;
 }
-async function customerView(){const seq=++customerSeq;show('我的訂單');body.replaceChildren();body.appendChild(phoneLookupForm());const top=el('div',null,'qmActions');top.append(btn('查看此瀏覽器的訂單',customerView),contact());body.appendChild(top);const s=state(body);s.id='qmLookupSummary';const keys=readKeys();
+async function customerView(){const seq=++customerSeq;show('我的訂單');body.replaceChildren();body.appendChild(phoneLookupForm());const top=el('div',null,'qmActions');top.append(btn('查看我的近期訂單',customerView),contact());body.appendChild(top);const s=state(body);s.id='qmLookupSummary';const keys=readKeys();
  if(!keys.length){s.textContent='請輸入訂購人手機號碼查詢';return;}
  s.textContent='正在載入此瀏覽器保存的訂單…';try{const data=await api('customerList',{keys:keys});if(seq!==customerSeq||modal.hidden||title.textContent!=='我的訂單')return;s.textContent=data.orders.length?'以下為此瀏覽器保存的訂單，也可在上方輸入手機查詢。':'可在上方輸入訂購人手機查詢。若剛送出仍在處理中，請稍後再試。';data.orders.forEach(o=>{const k=keys.find(k=>k.orderId===o.orderId||k.requestId===o.requestId);if(k)k.orderId=o.orderId;});writeKeys(keys);data.orders.forEach(o=>customerCard(o,keys));}catch(e){if(seq===customerSeq)s.textContent='瀏覽器訂單暫時無法載入：'+e.message;}}
 
@@ -9046,6 +9074,7 @@ function customerCard(o,keys){const card=el('section',null,'qmOrderCard');
  const details=orderSection(card,'商品明細');o.items.forEach(i=>{const row=el('div',null,'qmItem'),info=el('div',null,'qmItemInfo');info.append(el('strong',i.name),el('small',(i.spec?i.spec+' · ':'')+'數量 '+i.qty));row.append(el('span','▧','qmItemMark'),info,el('strong',money(i.lineTotal),'qmItemPrice'));details.appendChild(row);});if(o.legacyDetails)details.appendChild(el('div',o.legacyDetails,'qmPre'));
  addMoney(details,'商品小計',o.subtotal);if(o.discount)addMoney(details,'購物券折抵',-o.discount);addMoney(details,o.shipping==='宅配'?'宅配運費':'超商運費',o.shippingFee);addMoney(details,'訂單總額（含運）',o.total,'qmTotal');if(o.receivedAmount!==null)addMoney(details,'Queena 已確認收款',o.receivedAmount);
  if(o.notice)card.appendChild(el('p','商品處理說明\n'+o.notice,'qmAlert'));if(o.refunds.length){const refundBox=orderSection(card,'退款紀錄');o.refunds.forEach(r=>refundBox.appendChild(el('p',r.status+'｜'+money(r.amount)+(r.date?'｜'+r.date:'')+(r.note?'\n'+r.note:''),'qmPre')));const refunded=o.refunds.filter(r=>r.status==='已退款').reduce((n,r)=>n+r.amount,0);addMoney(refundBox,'已退款合計',refunded);}
+ if(o.shipments&&o.shipments.length){const box=orderSection(card,'配送明細');o.shipments.forEach(function(g){const group=el('div',null,'qmItemEdit');group.append(el('h3',g.method+' · '+g.status),el('p',g.items.map(function(i){return i.name+(i.spec?'（'+i.spec+'）':'')+' ×'+i.qty;}).join('\n'),'qmPre'),el('p',g.region||'','qmHint'));if(g.tracking)group.appendChild(el('p','物流單號：'+g.tracking,'qmHint'));box.appendChild(group);});}
  const delivery=orderSection(card,'收件資訊');delivery.appendChild(el('p','配送：'+o.shipping+'\n收件人：'+o.receiver+'\n手機：'+o.phone+'\n地區：'+o.region+(o.tracking?'\n物流單號：'+o.tracking:''),'qmPre qmDelivery'));
  const progress=orderSection(card,'訂單進度'),track=el('div',null,'qmProgress');const paid=/已付款|已收款/.test(o.paymentStatus),sent=o.shippingStatus==='已出貨',preparing=/備貨/.test(o.shippingStatus);[['訂單成立',true],['已確認收款',paid],['備貨中',preparing||sent],['已出貨',sent]].forEach((step,index)=>{const active=index===2&&preparing;const node=el('div',null,'qmStep'+(step[1]?' done':'')+(active?' current':''));node.append(el('span',step[1]?'✓':String(index+1),'qmStepDot'),el('span',step[0]));track.appendChild(node);});progress.appendChild(track);progress.appendChild(el('p','以目前付款與出貨狀態為準；部分出貨、退款或取消請查看上方狀態與說明。','qmProgressNote'));const contactRow=el('div',null,'qmActions');contactRow.appendChild(contact());progress.appendChild(contactRow);
  if(o.canReport&&o.bankTransfer){const bank=o.bankTransfer,b=el('div',null,'qmCard');b.appendChild(el('h3','匯款資料'));b.appendChild(el('p','銀行：'+bank.bankName+'\n戶名：'+bank.accountName+'\n帳號：'+bank.accountNumber+'\n應付金額：'+money(o.total),'qmPre'));if(o.paymentDueAt)b.appendChild(el('p','付款期限：'+date(o.paymentDueAt),'qmHint'));if(o.total===null)b.appendChild(el('p','請先等 Queena 確認最終金額，再匯款。','qmAlert'));else if(o.paymentDueAt&&Date.parse(o.paymentDueAt)<Date.now())b.appendChild(el('p','付款時間已到；逾時匯款請先聯絡 Queena 確認。','qmAlert'));
@@ -9057,16 +9086,16 @@ function adminLogin(){show('訂單管理');body.replaceChildren();const f=el('fo
 async function adminList(){if(!adminSession){adminLogin();return;}show('訂單管理');body.replaceChildren();const f=el('form',null,'qmActions'),input=el('input');input.type='search';input.placeholder='搜尋訂單編號、姓名或手機';input.value=adminQuery;input.setAttribute('aria-label','搜尋訂單');const search=el('button','搜尋','qmBtn');search.type='submit';f.append(input,search);f.addEventListener('submit',e=>{e.preventDefault();adminQuery=input.value;adminList();});body.appendChild(f);body.appendChild(btn('登出',async()=>{try{await api('adminLogout',{session:adminSession});}catch(e){}adminSession='';adminLogin();}));const s=state(body);s.textContent='正在載入訂單…';try{const d=await api('adminList',{session:adminSession,query:adminQuery});s.textContent='共 '+d.matched+' 筆符合，顯示最近 '+d.orders.length+' 筆。';d.orders.forEach(o=>{const card=el('section',null,'qmCard');card.append(el('h3',o.orderId),el('p',date(o.createdAt)+'\n'+o.buyerName+'｜'+o.buyerPhone+'\n'+money(o.total)+'｜'+o.paymentStatus+'｜'+o.shippingStatus,'qmPre'));card.appendChild(btn('編輯訂單',()=>adminEdit(o),true));body.appendChild(card);});}catch(e){s.textContent=e.message;if(/登入/.test(e.message))adminSession='';}}
 function adminEdit(o){currentEdit=o;show('編輯訂單');body.replaceChildren();const top=el('div',null,'qmActions');top.appendChild(btn('← 返回訂單列表',adminList));body.appendChild(top);const f=el('form'),base=el('section',null,'qmCard');base.append(el('h3',o.orderId),el('p','建立時間：'+date(o.createdAt),'qmHint'));base.appendChild(el('h3','訂購人與配送資訊','qmSectionTitle'));const grid=el('div',null,'qmGrid');base.appendChild(grid);
  ['buyerName','buyerPhone','receiver','phone'].forEach((k,i)=>{const input=field(grid,['訂購人姓名','訂購人手機','收件人姓名','收件人手機'][i],k,o[k],i%2?'tel':'text');input.required=true;if(i%2)input.pattern='09[0-9]{8}';});
- const shipping=select(grid,'配送方式','shipping',o.shipping,['宅配','7-11','全家']),payment=select(grid,'付款方式','paymentMethod',o.paymentMethod,['銀行轉帳','LINE Pay','貨到付款']);field(grid,'宅配地址','address',o.address);field(grid,'超商縣市／區','storeArea',o.storeArea);field(grid,'超商門市名稱','storeName',o.storeName);field(grid,'物流單號','tracking',o.tracking);f.appendChild(base);
+ const shipping=select(grid,'配送方式','shipping',o.shipping,['宅配','7-11','全家','分開配送－7-11','分開配送－全家']),payment=select(grid,'付款方式','paymentMethod',o.paymentMethod,['銀行轉帳','LINE Pay','貨到付款']);field(grid,'宅配地址','address',o.address);field(grid,'超商縣市／區','storeArea',o.storeArea);field(grid,'超商門市名稱','storeName',o.storeName);field(grid,'物流單號','tracking',o.tracking);f.appendChild(base);
  const productsBox=el('section',null,'qmCard');productsBox.appendChild(el('h3','商品明細','qmSectionTitle'));productsBox.appendChild(el('p','可更改商品、規格、數量及議定單價；單價留白表示待確認。宅配免運，超商運費 $40。','qmHint'));const itemRows=el('div');productsBox.appendChild(itemRows);let replacingLegacy=false;
  function itemRow(item){const row=el('div',null,'qmItemEdit'),g=el('div',null,'qmGrid');row.appendChild(g);const n=field(g,'商品名稱','itemName',item.name);n.required=true;n.maxLength=200;n.parentElement.classList.add('qmWide');const spec=field(g,'規格','itemSpec',item.spec);spec.maxLength=1500;spec.parentElement.classList.add('qmWide');const q=field(g,'數量','itemQty',item.qty,'number');q.required=true;q.min=1;q.max=99;q.step=1;const u=field(g,'單價','itemPrice',item.unitPrice,'number');u.min=0;u.step='0.01';row.appendChild(btn('移除此項',()=>row.remove()));itemRows.appendChild(row);}
  if(o.items.length)o.items.forEach(itemRow);else{productsBox.appendChild(el('p','舊訂單明細：\n'+o.legacyDetails,'qmPre'));productsBox.appendChild(el('p','若新增商品，請把這張訂單的所有商品完整填入，才會取代舊明細。未新增則保留舊明細。','qmAlert'));}
  productsBox.appendChild(btn('＋ 新增商品',()=>{replacingLegacy=true;itemRow({name:'',spec:'',qty:1,unitPrice:null});}));field(productsBox,'購物券／議定折抵金額','discount',o.discount,'number').step='0.01';f.appendChild(productsBox);
- const states=el('section',null,'qmCard');states.appendChild(el('h3','付款與出貨狀況','qmSectionTitle'));const sg=el('div',null,'qmGrid');states.appendChild(sg);select(sg,'付款狀態','paymentStatus',o.paymentStatus,['待匯款','待確認金額','待提供LINE Pay付款資訊','貨到付款待確認','客人已回報轉帳｜待人工核帳','已付款','部分退款','已退款','已取消']);select(sg,'出貨狀態','shippingStatus',o.shippingStatus,['未出貨','備貨中','部分備貨中','部分出貨','已出貨','已取消']);select(sg,'訂單狀態','orderStatus',o.orderStatus,['待確認','已確認','處理中','已完成','已取消']);const received=field(sg,'已確認的實收金額','receivedAmount',o.receivedAmount,'number');received.min=0;received.step='0.01';states.appendChild(el('p','「客人已回報轉帳」不代表已入帳；確認入帳後，請選已付款並填寫實收金額。','qmHint'));field(states,'給客人的說明（斷貨、換貨等）','notice',o.notice,'textarea').maxLength=2000;field(states,'內部備註（僅自己可見）','internalNote',o.internalNote,'textarea').maxLength=4000;field(states,'客人原訂單備註','note',o.note,'textarea').maxLength=500;if(o.lastFive)states.appendChild(el('p','客人回報轉帳末五碼：'+o.lastFive,'qmHint'));f.appendChild(states);
+ const states=el('section',null,'qmCard');states.appendChild(el('h3','付款與出貨狀況','qmSectionTitle'));const sg=el('div',null,'qmGrid');states.appendChild(sg);select(sg,'付款狀態','paymentStatus',o.paymentStatus,['待匯款','待確認金額','待提供LINE Pay付款資訊','貨到付款待確認','客人已回報轉帳｜待人工核帳','已付款','部分退款','已退款','已取消']);select(sg,'出貨狀態','shippingStatus',o.shippingStatus,['未出貨','備貨中','部分備貨中','部分出貨','已出貨','已取消']);select(sg,'訂單狀態','orderStatus',o.orderStatus,['待確認','已確認','處理中','已完成','已取消']);if(o.shipments&&o.shipments.length>1){o.shipments.forEach(function(g,index){select(sg,g.method+'出貨狀態','shipGroupStatus'+index,g.status,['未出貨','備貨中','部分備貨中','部分出貨','已出貨','已取消']);field(sg,g.method+'物流單號','shipGroupTracking'+index,g.tracking);});states.appendChild(el('p','分開配送時，整張訂單的出貨狀態由各配送區狀態自動彙整。','qmHint'));}const received=field(sg,'已確認的實收金額','receivedAmount',o.receivedAmount,'number');received.min=0;received.step='0.01';states.appendChild(el('p','「客人已回報轉帳」不代表已入帳；確認入帳後，請選已付款並填寫實收金額。','qmHint'));field(states,'給客人的說明（斷貨、換貨等）','notice',o.notice,'textarea').maxLength=2000;field(states,'內部備註（僅自己可見）','internalNote',o.internalNote,'textarea').maxLength=4000;field(states,'客人原訂單備註','note',o.note,'textarea').maxLength=500;if(o.lastFive)states.appendChild(el('p','客人回報轉帳末五碼：'+o.lastFive,'qmHint'));f.appendChild(states);
  const refundBox=el('section',null,'qmCard');refundBox.append(el('h3','退款紀錄','qmSectionTitle'),el('p','這裡只登記退款，不會自動轉帳。原訂單總額保留，已退款金額另外顯示。','qmHint'));const refundRows=el('div');refundBox.appendChild(refundRows);
  function refundRow(x){const row=el('div',null,'qmItemEdit');select(row,'退款狀態','refundStatus',x.status,['待退款','已退款']);field(row,'退款日期','refundDate',x.date,'date');const a=field(row,'退款金額','refundAmount',x.amount,'number');a.min='0.01';a.step='0.01';a.required=true;field(row,'退款商品／說明（客人可見）','refundNote',x.note,'textarea');row.appendChild(btn('移除此筆',()=>row.remove()));refundRows.appendChild(row);}
  o.refunds.forEach(refundRow);refundBox.appendChild(btn('＋ 新增退款紀錄',()=>refundRow({status:'待退款',date:'',amount:'',note:''})));f.appendChild(refundBox);
- const save=el('button','儲存更新','qmBtn primary');save.type='submit';f.appendChild(save);const message=state(f);f.addEventListener('submit',async e=>{e.preventDefault();if(busy||!f.reportValidity())return;const val=n=>f.elements[n].value;const order={};['buyerName','buyerPhone','receiver','phone','address','storeArea','storeName','tracking','shipping','paymentMethod','paymentStatus','shippingStatus','orderStatus','notice','internalNote','note','discount','receivedAmount'].forEach(k=>order[k]=val(k));order.items=o.items.length||replacingLegacy?Array.from(itemRows.children).map(r=>({name:r.querySelector('[name=itemName]').value,spec:r.querySelector('[name=itemSpec]').value,qty:Number(r.querySelector('[name=itemQty]').value),unitPrice:r.querySelector('[name=itemPrice]').value})):null;order.refunds=Array.from(refundRows.children).map(r=>({status:r.querySelector('[name=refundStatus]').value,date:r.querySelector('[name=refundDate]').value,amount:r.querySelector('[name=refundAmount]').value,note:r.querySelector('[name=refundNote]').value}));busy=true;save.disabled=true;message.textContent='正在儲存…';try{const d=await api('adminSave',{session:adminSession,orderId:o.orderId,revision:o.revision,order:order});busy=false;adminEdit(d.order);const ok=body.querySelector('.qmState');if(ok)ok.textContent='已儲存，客人重新整理查詢頁即可看到。';}catch(err){message.textContent=err.message;}finally{busy=false;save.disabled=false;}});body.appendChild(f);
+ const save=el('button','儲存更新','qmBtn primary');save.type='submit';f.appendChild(save);const message=state(f);f.addEventListener('submit',async e=>{e.preventDefault();if(busy||!f.reportValidity())return;const val=n=>f.elements[n].value;const order={};['buyerName','buyerPhone','receiver','phone','address','storeArea','storeName','tracking','shipping','paymentMethod','paymentStatus','shippingStatus','orderStatus','notice','internalNote','note','discount','receivedAmount'].forEach(k=>order[k]=val(k));order.shipments=(o.shipments||[]).map(function(g,index){return {method:g.method,status:f.elements['shipGroupStatus'+index]?val('shipGroupStatus'+index):val('shippingStatus'),tracking:f.elements['shipGroupTracking'+index]?val('shipGroupTracking'+index):val('tracking')};});order.items=o.items.length||replacingLegacy?Array.from(itemRows.children).map(r=>({name:r.querySelector('[name=itemName]').value,spec:r.querySelector('[name=itemSpec]').value,qty:Number(r.querySelector('[name=itemQty]').value),unitPrice:r.querySelector('[name=itemPrice]').value})):null;order.refunds=Array.from(refundRows.children).map(r=>({status:r.querySelector('[name=refundStatus]').value,date:r.querySelector('[name=refundDate]').value,amount:r.querySelector('[name=refundAmount]').value,note:r.querySelector('[name=refundNote]').value}));busy=true;save.disabled=true;message.textContent='正在儲存…';try{const d=await api('adminSave',{session:adminSession,orderId:o.orderId,revision:o.revision,order:order});busy=false;adminEdit(d.order);const ok=body.querySelector('.qmState');if(ok)ok.textContent='已儲存，客人重新整理查詢頁即可看到。';}catch(err){message.textContent=err.message;}finally{busy=false;save.disabled=false;}});body.appendChild(f);
  const recovery=el('section',null,'qmCard');recovery.append(el('h3','協助客人找回訂單'),el('p','舊訂單或換手機可建立補查連結，手動傳給該位客人。任何持有連結的人都能查這筆訂單，請勿公開。','qmHint'));const rs=state(recovery);const rb=btn('產生並複製補查連結',async()=>{rb.disabled=true;try{const d=await api('adminRecovery',{session:adminSession,orderId:o.orderId});await copy(lookupLink(d.orderId,d.token),rs);o.revision='';rs.appendChild(el('p','補查連結已更新。若還要修改訂單，請先返回列表重新開啟。','qmHint'));}catch(e){rs.textContent=e.message;}finally{rb.disabled=false;}});recovery.appendChild(rb);body.appendChild(recovery);
 }
 function mountTools(){const mobile=document.querySelector('#mobileSite .mHeader');if(mobile){const row=el('div',null,'qmHomeTools'),b=btn('查詢訂單',customerView);b.className='qmEntry';row.appendChild(b);mobile.appendChild(row);}const desktop=document.querySelector('.shopTopInner');if(desktop){const b=btn('查詢訂單',customerView);b.className='qmEntry';desktop.appendChild(b);}
