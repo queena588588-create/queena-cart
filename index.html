@@ -4400,6 +4400,21 @@ html.shared-product-initial #queenaHomeEntry::after{
   .cartActionGrid .lineFriendAddBtn{font-size:11px;padding:8px 4px;min-height:74px}
 }
 </style>
+<style>
+/* 清楚的浮動購物車與送單完成狀態 */
+.mobileSite .floatingCartFab{width:auto;min-width:108px;height:54px;gap:7px;padding:9px 13px;box-sizing:border-box;background:#dc3165;color:white;opacity:1;filter:none}
+.floatingCartFab svg{display:block;flex:none;color:#fff}
+.floatingCartLabel{font-size:14px;font-weight:800;white-space:nowrap;color:#fff}
+.cartActionGrid #sendBtn[hidden],.cartActionGrid #lineFriendPrompt[hidden]{display:none!important}
+.cartActionGrid:has(#sendBtn[hidden]) #openCheckout{grid-column:1/-1;min-height:48px}
+.cartPanel.checkoutCompleted #cartItems,
+.cartPanel.checkoutCompleted #messageBox,
+.cartPanel.checkoutCompleted #cartCouponNotice,
+.cartPanel.checkoutCompleted .cartActionGrid,
+.cartPanel.checkoutCompleted #clearBtn{display:none!important}
+#checkoutResult .checkoutSuccessTitle{display:block;margin:0 0 10px;font-size:clamp(25px,6vw,32px);font-weight:800;line-height:1.35;color:#18783c}
+#checkoutResult .checkoutSuccessOrder{display:block;margin:0 0 20px;font-size:clamp(20px,5vw,26px);font-weight:800;line-height:1.4;color:#594238;overflow-wrap:anywhere}
+</style>
 </head>
 
 <body>
@@ -4630,7 +4645,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
     </button>
   </nav>
   <button type="button" id="floatingCartBtn" class="floatingCartFab" aria-label="開啟購物車" title="開啟購物車">
-    🛒<span id="floatingCartBadge" class="floatingCartBadge" style="display:none">0</span>
+    <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l2.4 12h11.2L21 7H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg><span class="floatingCartLabel">購物車</span><span id="floatingCartBadge" class="floatingCartBadge" style="display:none">0</span>
   </button>
 </div>
 
@@ -4838,7 +4853,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
     </div>
 
     <button id="sendBtn" class="actionBtn lineBtn">
-      LINE 人工確認訂單
+      LINE 人工結帳
     </button>
 
     <div id="lineFriendPrompt" class="lineFriendPrompt" style="display:none;"></div>
@@ -6323,6 +6338,12 @@ document
   .getElementById('viewCart')
   .addEventListener('click', function(){
 
+    const completedPanel=document.querySelector('#overlay .cartPanel.checkoutCompleted');
+    if(completedPanel && queenaCartLines_().length){
+      completedPanel.classList.remove('checkoutCompleted');
+      document.getElementById('checkoutResult').textContent='';
+      document.getElementById('checkoutReceiptActions').hidden=true;
+    }
     renderCartPanel();
 
     showLineContactPrompt_();
@@ -6523,7 +6544,7 @@ function startFullLineLogin_(items){
       const box=document.getElementById('lineFriendPrompt');
       if(box){box.innerHTML='';const a=document.createElement('a');a.href=loginUrl.href;a.textContent='💚 點此繼續 LINE 身分確認';a.className='lineFriendAddBtn';box.appendChild(a);box.style.display='block';}
       sendBtn.disabled=false;
-      sendBtn.textContent='LINE 人工確認訂單';
+      sendBtn.textContent='LINE 人工結帳';
       window.location.assign(loginUrl.href);
 
     })
@@ -6531,7 +6552,7 @@ function startFullLineLogin_(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 人工確認訂單';
+        'LINE 人工結帳';
 
       alert(
         'LINE 確認暫時未完成：' + (err.message || String(err)) + '\n也可以選擇下方「自助快速結帳」。'
@@ -6567,7 +6588,7 @@ function showLineContactPrompt_(){
         '<a class="lineFriendAddBtn" href="' +
           escapeHtml(addUrl) +
         '" target="_blank" rel="noopener">' +
-          '💗 加 Queena 好友｜享優惠價付款' +
+          '🩷 加好友' +
         '</a>';
 
       box.style.display = 'block';
@@ -6628,7 +6649,7 @@ function submitWishlist(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 人工確認訂單';
+        'LINE 人工結帳';
 
       alert('訂單已送出。'+(data.notification && !data.notification.accepted ? 'LINE 自動通知尚未成功，請主動聯絡 Queena。':'請開啟下方 LINE 聯絡 Queena 確認訂單。'));
       showLineContactPrompt_();
@@ -6682,7 +6703,7 @@ function submitWishlist(items){
       if(/身分.*失效|重新確認/.test(String(err.message || ''))){lineProfile=null;queenaLocalStorage.removeItem('queenaLineRememberToken');}
       sendBtn.disabled = false;
       sendBtn.textContent =
-        'LINE 人工確認訂單';
+        'LINE 人工結帳';
 
       alert(
         '送出失敗：' +
@@ -6707,7 +6728,7 @@ function handleLineOrderReceipt_(profile){
   queenaLocalStorage.removeItem('queenaPendingSend');
   queenaSessionStorage.removeItem('queenaPendingSendBackup');
   pendingSubmitInFlight=false;wishlistSubmitting=false;queenaOrderInFlight=false;
-  sendBtn.disabled=false;sendBtn.textContent='LINE 人工確認訂單';
+  sendBtn.disabled=false;sendBtn.textContent='LINE 人工結帳';
   if(receipt.saved){
     ['queenaPendingCart','queenaWishlistRequestId','queenaWishlistFingerprint'].forEach(function(k){queenaLocalStorage.removeItem(k);});
     queenaSessionStorage.removeItem('queenaPendingCartBackup');
@@ -8724,8 +8745,8 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   actionGrid.setAttribute('aria-label', '選擇下單方式');
   panel.insertBefore(actionGrid, wrap);
   actionGrid.appendChild(document.getElementById('sendBtn'));
-  actionGrid.appendChild(document.getElementById('lineFriendPrompt'));
   actionGrid.appendChild(document.getElementById('openCheckout'));
+  actionGrid.appendChild(document.getElementById('lineFriendPrompt'));
 
   const style = document.createElement('style');
   style.textContent = `#checkoutForm{padding:24px 0 8px;text-align:left;color:#51443d;line-height:1.6}
@@ -8918,7 +8939,10 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       if(payload.payment==='LINE Pay')receiptLines.push('請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。');
       else if(payload.payment==='貨到付款')receiptLines.push('請將訂單編號傳給 Queena，方便確認。');
       if(data.notification && !data.notification.accepted)receiptLines.push('謝謝您 訂單已送出');
-      result.textContent=receiptLines.join('\n');
+      result.textContent='';
+      const successTitle=document.createElement('strong');successTitle.className='checkoutSuccessTitle';successTitle.textContent='✅ 訂單已建立';result.appendChild(successTitle);
+      const successOrder=document.createElement('strong');successOrder.className='checkoutSuccessOrder';successOrder.textContent='訂單編號：'+data.orderId;result.appendChild(successOrder);
+      const receiptBody=document.createElement('div');receiptBody.textContent=receiptLines.slice(3).join('\n');result.appendChild(receiptBody);
       completedOrderId=data.orderId;completedBuyerPhone=payload.buyerPhone;
       receiptActions.hidden=false;
       transferForm.hidden=payload.payment!=='銀行轉帳';
@@ -8947,7 +8971,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       if(payload.payment!=='銀行轉帳'){const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);}
       cart={};queenaLocalStorage.removeItem('queenaPendingCart');queenaLocalStorage.removeItem('queenaPendingSend');queenaSessionStorage.removeItem('queenaPendingCartBackup');queenaSessionStorage.removeItem('queenaPendingSendBackup');
       queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
-      form.reset();toggleFields();syncReceiver();setCheckoutView(false);requestId='';lastPayload='';
+      form.reset();toggleFields();syncReceiver();setCheckoutView(false);panel.classList.add('checkoutCompleted');requestId='';lastPayload='';
       result.scrollIntoView({behavior:'smooth',block:'nearest'});
     }catch(err){result.textContent='未取得完成確認：'+err.message+'\n若結果不明，請先向 Queena 查詢，避免重新建立另一筆訂單。';}
     finally{inFlight=false;queenaOrderInFlight=false;sendBtn.disabled=false;submit.disabled=false;submit.textContent='確認資料並送出訂單';}
