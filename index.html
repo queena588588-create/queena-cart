@@ -8998,7 +8998,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
 (function(){
 'use strict';
 const KEY='queenaOrderAccessV1',modal=document.getElementById('qmModal'),body=document.getElementById('qmBody'),title=document.getElementById('qmTitle');
-let adminSession='',adminQuery='',busy=false,oldOverflow='',previousFocus=null,currentEdit=null;
+let customerSeq=0,adminSession='',adminQuery='',busy=false,oldOverflow='',previousFocus=null,currentEdit=null;
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined&&text!==null)e.textContent=String(text);if(cls)e.className=cls;return e;}
 function btn(text,fn,primary){const b=el('button',text,'qmBtn'+(primary?' primary':''));b.type='button';b.addEventListener('click',fn);return b;}
 function state(parent){const e=el('div','','qmState');e.setAttribute('role','status');e.setAttribute('aria-live','polite');parent.appendChild(e);return e;}
@@ -9018,10 +9018,15 @@ function contact(){const a=el('a','聯絡 Queena','qmBtn');a.href='https://line.
 function lookupLink(id,token){return location.origin+location.pathname+'#order_lookup='+encodeURIComponent(id+':'+token);}
 async function copy(text,s){try{await navigator.clipboard.writeText(text);s.textContent='已複製，請妥善保存，勿公開此查詢連結。';}catch(e){const a=el('textarea');a.value=text;a.readOnly=true;s.appendChild(a);a.select();s.textContent='此裝置無法自動複製，請長按以下連結：';const a2=el('textarea');a2.value=text;a2.readOnly=true;s.appendChild(a2);}}
 function addMoney(box,label,n,cls){const row=el('div',null,'qmMoney'+(cls?' '+cls:''));row.append(el('span',label),el('strong',money(n)));box.appendChild(row);}
-async function customerView(){show('我的訂單');body.replaceChildren();const top=el('div',null,'qmActions');top.append(btn('重新整理',customerView),contact());body.appendChild(top);body.appendChild(el('p','不用輸入訂單編號或密碼；這裡顯示此瀏覽器保存的訂單。','qmHint'));const s=state(body),keys=readKeys();
- if(!keys.length){s.textContent='此瀏覽器尚未保存訂單。若在其他手機、LINE 內建瀏覽器下單，或已清除瀏覽資料，請聯絡 Queena 取得補查連結。';return;}
- s.textContent='正在查詢最新訂單…';try{const data=await api('customerList',{keys:keys});if(modal.hidden||title.textContent!=='我的訂單')return;s.textContent=data.orders.length?'':'尚未找到訂單。如果剛送出仍在處理中，請稍後重新整理；舊訂單可聯絡 Queena 協助查詢。';data.orders.forEach(o=>{const k=keys.find(k=>k.orderId===o.orderId||k.requestId===o.requestId);if(k)k.orderId=o.orderId;});writeKeys(keys);data.orders.forEach(o=>customerCard(o,keys));}catch(e){s.textContent='暫時無法查詢：'+e.message;}}
-function customerCard(o,keys){const card=el('section',null,'qmCard');card.append(el('h3',o.orderId),el('p',date(o.createdAt),'qmHint'));const status=el('div');[o.paymentStatus,o.shippingStatus,o.orderStatus].filter(Boolean).forEach(x=>status.appendChild(el('span',x,'qmBadge')));card.appendChild(status);
+function phoneLookupForm(){
+ const f=el('form',null,'qmCard'),label=el('label','訂購人手機號碼'),input=el('input');input.type='tel';input.inputMode='tel';input.name='lookupPhone';input.id='qmLookupPhone';input.placeholder='09 開頭，共 10 碼';input.pattern='09[0-9]{8}';input.maxLength=10;input.required=true;input.autocomplete='tel';label.appendChild(input);f.appendChild(label);const b=el('button','查詢訂單','qmBtn primary');b.type='submit';f.appendChild(b);f.appendChild(el('p','輸入下單時填寫的訂購人手機，即可查看明細、付款與出貨進度。個人聯絡資料會遮蔽。','qmHint'));const status=state(f);
+ f.addEventListener('submit',async function(e){e.preventDefault();if(!f.reportValidity()||b.disabled)return;const seq=++customerSeq;b.disabled=true;status.textContent='正在查詢…';const summary=document.getElementById('qmLookupSummary');if(summary)summary.textContent='';body.querySelectorAll('.qmOrderCard').forEach(x=>x.remove());try{const data=await api('customerPhone',{phone:input.value.trim()});if(seq!==customerSeq||modal.hidden||title.textContent!=='我的訂單')return;status.textContent=data.orders.length?'找到 '+data.matched+' 筆訂單'+(data.matched>100?'，顯示最近 100 筆':'')+'。手機查詢僅供查看；匯款資訊與轉帳回報請使用原訂單連結或聯絡 Queena。':'沒有找到這個訂購手機的訂單，請確認號碼或聯絡 Queena。';data.orders.forEach(o=>customerCard(o,[]));}catch(err){if(seq===customerSeq)status.textContent=err.message;}finally{b.disabled=false;}});return f;
+}
+async function customerView(){const seq=++customerSeq;show('我的訂單');body.replaceChildren();body.appendChild(phoneLookupForm());const top=el('div',null,'qmActions');top.append(btn('查看此瀏覽器的訂單',customerView),contact());body.appendChild(top);const s=state(body);s.id='qmLookupSummary';const keys=readKeys();
+ if(!keys.length){s.textContent='可直接輸入訂購人手機查詢，不需要訂單編號或密碼。';return;}
+ s.textContent='正在載入此瀏覽器保存的訂單…';try{const data=await api('customerList',{keys:keys});if(seq!==customerSeq||modal.hidden||title.textContent!=='我的訂單')return;s.textContent=data.orders.length?'以下為此瀏覽器保存的訂單，也可在上方輸入手機查詢。':'可在上方輸入訂購人手機查詢。若剛送出仍在處理中，請稍後再試。';data.orders.forEach(o=>{const k=keys.find(k=>k.orderId===o.orderId||k.requestId===o.requestId);if(k)k.orderId=o.orderId;});writeKeys(keys);data.orders.forEach(o=>customerCard(o,keys));}catch(e){if(seq===customerSeq)s.textContent='瀏覽器訂單暫時無法載入：'+e.message;}}
+
+function customerCard(o,keys){const card=el('section',null,'qmCard qmOrderCard');card.append(el('h3',o.orderId),el('p',date(o.createdAt),'qmHint'));const status=el('div');[o.paymentStatus,o.shippingStatus,o.orderStatus].filter(Boolean).forEach(x=>status.appendChild(el('span',x,'qmBadge')));card.appendChild(status);
  o.items.forEach(i=>card.appendChild(el('div',i.name+(i.spec?'\n'+i.spec:'')+' ×'+i.qty+'\n'+money(i.lineTotal),'qmItem')));if(o.legacyDetails)card.appendChild(el('div',o.legacyDetails,'qmPre'));
  addMoney(card,'商品小計',o.subtotal);if(o.discount)addMoney(card,'購物券折抵',-o.discount);addMoney(card,o.shipping==='宅配'?'宅配運費':'超商運費',o.shippingFee);addMoney(card,'訂單總額（含運）',o.total,'qmTotal');if(o.receivedAmount!==null)addMoney(card,'Queena 已確認收款',o.receivedAmount);
  if(o.notice)card.appendChild(el('p','商品處理說明\n'+o.notice,'qmAlert'));if(o.refunds.length){const refundBox=el('div',null,'qmCard');refundBox.appendChild(el('h3','退款紀錄'));o.refunds.forEach(r=>refundBox.appendChild(el('p',r.status+'｜'+money(r.amount)+(r.date?'｜'+r.date:'')+(r.note?'\n'+r.note:''),'qmPre')));const refunded=o.refunds.filter(r=>r.status==='已退款').reduce((n,r)=>n+r.amount,0);addMoney(refundBox,'已退款合計',refunded);card.appendChild(refundBox);}
@@ -9054,6 +9059,7 @@ function mountTools(){const home=document.querySelector('#queenaHomeEntry .qeHom
  const params=new URLSearchParams(location.hash.slice(1)),link=params.get('order_lookup');if(link){const at=link.lastIndexOf(':'),orderId=link.slice(0,at),token=link.slice(at+1);if(/^Q\d{8}-(?:[1-9]\d{0,2}|1000)$/.test(orderId)&&/^[a-f0-9]{64}$/.test(token)){const a=readKeys().filter(k=>k.orderId!==orderId);a.push({orderId:orderId,token:token});writeKeys(a);history.replaceState(null,'',location.pathname+location.search);customerView();}}
 }
 mountTools();window.qmOpenOrders=customerView;
+if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearchParams(location.hash.slice(1)).get('order_lookup'))adminLogin();
 })();
 </script>
 
