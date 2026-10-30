@@ -3,7 +3,7 @@ const GAS_URL =
 
 const PRODUCT_REFRESH_MS = 5 * 60 * 1000;
 const PRODUCT_KEEP_SECONDS = 7 * 24 * 60 * 60;
-const SITE_ORIGIN = 'https://queena-cart.pages.dev';
+const SITE_ORIGIN = 'https://queena.tw';
 
 function jsonResponse(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
