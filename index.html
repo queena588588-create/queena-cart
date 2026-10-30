@@ -4512,6 +4512,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
         <nav class="qeFooterNav" aria-label="商城說明">
           <button type="button" class="qeFooterLink" data-qe-info="about">關於我</button>
           <button type="button" class="qeFooterLink" data-qe-info="shopping">購物說明</button>
+          <button type="button" class="qeFooterLink" data-qe-info="payment">付款與配送</button>
           <button type="button" class="qeFooterLink" data-qe-info="faq">常見問題</button>
           <button type="button" class="qeFooterLink" data-qe-info="contact">聯繫我</button>
         </nav>
@@ -4520,7 +4521,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
       <div class="qeCopyright">© <span id="qeCopyrightYear"></span> QUEENA SELECT. All rights reserved.</div>
     </footer>
   </div>
-  <div class="qeInfoOverlay" id="qeInfoOverlay" aria-hidden="true"><div class="qeInfoPanel" role="dialog" aria-modal="true"><button type="button" class="qeInfoClose" id="qeInfoClose" aria-label="關閉">×</button><h2 class="qeInfoTitle" id="qeInfoTitle">商城說明</h2><div class="qeInfoBody" id="qeInfoBody"><span class="qeInfoLoading">載入中…</span></div></div></div>
+  <div class="qeInfoOverlay" id="qeInfoOverlay" aria-hidden="true"><div class="qeInfoPanel" role="dialog" aria-modal="true"><button type="button" class="qeInfoClose" id="qeInfoClose" aria-label="關閉">×</button><h2 class="qeInfoTitle" id="qeInfoTitle" tabindex="-1">商城說明</h2><div class="qeInfoBody" id="qeInfoBody"><span class="qeInfoLoading">載入中…</span></div></div></div>
 </div>
 <!-- QUEENA_HOME_END_HTML -->
 
@@ -4710,8 +4711,8 @@ html[data-queena-share="1"] #queenaHomeEntry{
       </p>
 
       <p class="heroSub">
-        每檔期優惠不同｜喜歡的直接加入清單<br>
-        送出清單後 Queena 會幫妳確認最優惠價格
+        喜歡的先加入清單，再選擇結帳方式<br>
+        可自助送單，也可請 Queena 協助確認優惠
       </p>
 
       <div class="heroAction">
@@ -4831,7 +4832,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
     <h2 id="couponWelcomeTitle">歡迎來逛逛 ♡</h2>
     <p class="couponWelcomeText">領取 限定優惠券</p>
     <div class="couponWelcomeOffer">滿 $500 折 $30</div>
-    <p class="couponSelfCheckoutHint">部分商品可自助快速結帳<br>也可選擇 LINE 人工結帳</p>
+    <p class="couponSelfCheckoutHint">部分商品可自助填單，依指示付款<br>也可透過 LINE 請 Queena 協助下單</p>
     <p class="couponWelcomeNote">本券不與優惠活動併用</p>
     <div class="couponWelcomeActions">
       <button type="button" id="couponClaimBtn" class="couponClaimBtn">立即領券</button>
@@ -8584,6 +8585,10 @@ function openSharedQueenaProduct(){
 (function(){
   'use strict';
   var infoCache = null;
+  var infoRequest = null;
+  var activeKey = '';
+  var previousFocus = null;
+  var infoTitles = {about:'關於我',shopping:'購物說明',faq:'常見問題',payment:'付款與配送'};
   var overlay = document.getElementById('qeInfoOverlay');
   var titleEl = document.getElementById('qeInfoTitle');
   var bodyEl = document.getElementById('qeInfoBody');
@@ -8592,21 +8597,48 @@ function openSharedQueenaProduct(){
   if(yearEl) yearEl.textContent = new Date().getFullYear();
 
   function esc(text){ return String(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
-  function closeInfo(){ if(!overlay) return; overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true'); }
-  function showInfo(key){
+  function closeInfo(){
     if(!overlay) return;
+    overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true');
+    activeKey='';
+    if(previousFocus && previousFocus.isConnected) previousFocus.focus();
+  }
+  function loadInfo(){
+    if(Array.isArray(infoCache)) return Promise.resolve(infoCache);
+    if(infoRequest) return infoRequest;
+    if(typeof apiGet!=='function') return Promise.reject(new Error('說明連線暫時無法使用'));
+    infoRequest=apiGet('shopInfo',{_ts:Date.now()}).then(function(data){
+      if(!data || !Array.isArray(data.info) || !data.info.length) throw new Error('未取得說明');
+      infoCache=data.info;
+      return infoCache;
+    }).finally(function(){ infoRequest=null; });
+    return infoRequest;
+  }
+  function showInfo(key){
+    if(!overlay || !titleEl || !bodyEl) return;
+    if(!overlay.classList.contains('show')) previousFocus=document.activeElement;
+    activeKey=key;
     overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false');
-    titleEl.textContent='載入中…'; bodyEl.innerHTML='<span class="qeInfoLoading">載入中…</span>';
-    function render(data){
-      var item=(data||[]).find(function(x){return String(x.key||'')===key;});
-      titleEl.textContent=item&&item.title?item.title:'商城說明';
-      bodyEl.innerHTML=item&&item.content?esc(item.content).split('\n').join('<br>'):'內容尚未設定';
+    titleEl.textContent=infoTitles[key] || '商城說明';
+    titleEl.focus();
+    function render(item){
+      if(activeKey!==key) return;
+      bodyEl.removeAttribute('aria-busy');
+      titleEl.textContent=key==='payment' ? '付款與配送' : (item.title || infoTitles[key] || '商城說明');
+      bodyEl.innerHTML=esc(item.content).split('\n').join('<br>');
     }
-    if(Array.isArray(infoCache)){ render(infoCache); return; }
-    if(typeof apiGet!=='function'){ render([]); return; }
-    apiGet('shopInfo',{_ts:Date.now()}).then(function(data){
-      infoCache=(data&&Array.isArray(data.info))?data.info:[]; render(infoCache);
-    }).catch(function(){ render([]); });
+    function failed(){
+      if(activeKey!==key) return;
+      bodyEl.removeAttribute('aria-busy');
+      bodyEl.innerHTML='<p role="status">說明暫時無法開啟，請再試一次；需要協助也可以直接聯繫 Queena。</p><button type="button" class="qeFooterLink" data-qe-info="'+esc(key)+'">重新開啟說明</button><button type="button" class="qeFooterLink" data-qe-info="contact">聯繫 Queena</button>';
+    }
+    bodyEl.setAttribute('aria-busy','true');
+    bodyEl.innerHTML='<span class="qeInfoLoading" role="status">正在開啟'+esc(infoTitles[key] || '商城說明')+'，請稍候 ♡</span>';
+    loadInfo().then(function(data){
+      var lookupKey=key==='payment' ? 'shopping' : key;
+      var item=data.find(function(x){return String(x.key||'')===lookupKey;});
+      if(item && item.content) render(item); else failed();
+    }).catch(failed);
   }
   document.addEventListener('click',function(e){
     var btn=e.target.closest&&e.target.closest('[data-qe-info]');
@@ -8833,7 +8865,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     </fieldset>
     <fieldset class="checkoutCard"><legend><span>03</span> 付款方式</legend>
       <label class="checkoutNoHeading"><span class="checkoutSrOnly">付款方式</span><select name="payment"><option value="銀行轉帳">銀行轉帳</option><option value="LINE Pay">LINE Pay</option><option value="貨到付款">貨到付款</option></select></label>
-      <p id="checkoutPaymentHint" class="checkoutHint">加 Queena 好友 可選擇 Linepay </p>
+      <p id="checkoutPaymentHint" class="checkoutHint">銀行轉帳：送出訂單後查看付款資訊；如金額待確認，請先等 Queena 確認再付款。</p>
       <label>備註（選填）<textarea name="note" maxlength="500" rows="2" placeholder="有其他需求可填在這裡"></textarea></label>
     </fieldset>
     <fieldset class="checkoutCard checkoutReview"><legend><span>04</span> 訂單確認</legend>
@@ -8843,6 +8875,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       <button type="button" id="editCartFromCheckout" class="checkoutEditCart">← 返回商品清單修改規格／數量</button>
       <div id="checkoutShippingSummary" aria-live="polite"></div>
     </fieldset>
+    <p class="checkoutHint"><button type="button" class="qeFooterLink" data-qe-info="payment">查看付款、運費與出貨說明</button></p>
     <label class="checkoutCheck checkoutConsent"><input name="consent" type="checkbox" required><span>同意上述資料用於本次訂單聯絡與配送。</span></label>
     <button type="submit" id="checkoutSubmit" class="actionBtn">確認並送出訂單</button>
   </form><div id="checkoutResult" role="status" aria-live="polite" style="white-space:pre-wrap;text-align:left"></div>
@@ -8974,7 +9007,9 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     form.elements.address.required = hasHome;
     form.elements.storeName.required = !home;
     form.elements.storeArea.required = !home;
-    document.getElementById('checkoutPaymentHint').hidden=form.elements.payment.value==='貨到付款';
+    const paymentHint=document.getElementById('checkoutPaymentHint');
+    paymentHint.hidden=false;
+    paymentHint.textContent=form.elements.payment.value==='LINE Pay'?'LINE Pay：送出訂單後，將訂單編號傳給 Queena，取得付款資訊。':form.elements.payment.value==='貨到付款'?'超商取貨付款：取件時付款；僅適用結帳頁提供此選項的超商訂單。':'銀行轉帳：送出訂單後查看付款資訊；如金額待確認，請先等 Queena 確認再付款。匯款後可回報帳號末五碼。';
     refreshShippingSummary();
   }
   function refreshShippingSummary(){
