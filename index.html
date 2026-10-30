@@ -6069,7 +6069,7 @@ function renderCartPanelLegacy_(){
 
             '<button type="button" class="intentBtn askBtn ' +
               (item.intent === 'ask' ? 'active' : '') +
-            '">💬 想了解</button>' +
+            '">💬 LINE 詢問商品</button>' +
 
           '</div>' +
 
@@ -6142,9 +6142,7 @@ function renderCartPanelLegacy_(){
     row.querySelector('.askBtn')
       .addEventListener('click', function(){
 
-        item.intent = 'ask';
-        updateCart();
-        renderCartPanel();
+        queenaAskOfficialLine_(item.name);
 
       });
 
@@ -7203,7 +7201,7 @@ function openProductDetail(productName){
       buyHtml +
       '<div class="productDetailActions">' +
         '<button type="button" id="productDetailBuy" class="productDetailBtn productDetailBuy">🛒 我要買</button>' +
-        '<button type="button" id="productDetailAsk" class="productDetailBtn productDetailAsk">💬 想了解</button>' +
+        '<button type="button" id="productDetailAsk" class="productDetailBtn productDetailAsk">💬 LINE 詢問商品</button>' +
         '<button type="button" id="productDetailShare" class="productDetailBtn productDetailShare">↗ 分享這項商品</button>' +
       '</div>' +
     '</div>';
@@ -7236,7 +7234,16 @@ function openProductDetail(productName){
   }
 }
 
+function queenaOfficialInquiryUrl_(productName){
+  return 'https://line.me/R/oaMessage/'+encodeURIComponent('@753hvrac')+'/?'+encodeURIComponent('我想了解：'+String(productName||'').trim());
+}
+function queenaAskOfficialLine_(productName){
+  if(!String(productName||'').trim())return;
+  window.location.href=queenaOfficialInquiryUrl_(productName);
+}
+
 function addProductFromDetail(intent){
+  if(intent==='ask'){queenaAskOfficialLine_(activeDetailProductName);return;}
   const product = findQueenaProductByName(activeDetailProductName);
 
   if(!product) return;
