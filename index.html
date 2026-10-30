@@ -7160,14 +7160,7 @@ function openProductDetail(productName){
       '</div>'
     : '';
 
-  const buyHtml = product.buy
-    ? '<div class="productDetailSection">' +
-        '<div class="productDetailSectionTitle">購買說明</div>' +
-        '<div class="productDetailText">' +
-          mobileEscape(product.buy) +
-        '</div>' +
-      '</div>'
-    : '';
+  
 
   body.innerHTML =
     photoHtml +
@@ -7179,7 +7172,7 @@ function openProductDetail(productName){
       priceHtml + queenaDeliveryHtml_(product) +
       introHtml +
       specsHtml +
-      buyHtml +
+   
       '<div class="productDetailActions">' +
         '<button type="button" id="productDetailBuy" class="productDetailBtn productDetailBuy">🛒 我要買</button>' +
         '<button type="button" id="productDetailAsk" class="productDetailBtn productDetailAsk">💬 詢問客服此商品</button>' +
