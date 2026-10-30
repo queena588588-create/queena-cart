@@ -916,6 +916,20 @@ export default {
           request.url
         );
 
+      // 舊商品網址轉至品牌網域；API 與 OAuth 回傳仍留在原處處理。
+      if ((request.method === 'GET' || request.method === 'HEAD') &&
+          (url.hostname === 'queena-cart.pages.dev' || url.hostname === 'www.queena.tw') &&
+          url.pathname !== '/api' && !url.pathname.startsWith('/api/') &&
+          url.pathname !== '/auth/callback') {
+        const destination = new URL(url.toString());
+        destination.protocol = 'https:';
+        destination.host = 'queena.tw';
+        return new Response(null, {
+          status: 302,
+          headers: {location: destination.toString(), 'cache-control': 'no-store'}
+        });
+      }
+
       /* =========================
          LINE OAuth callback
       ========================= */
