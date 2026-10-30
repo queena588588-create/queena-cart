@@ -9309,7 +9309,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     return '您好，我想請 Queena 協助確認以下商品：\n'+items.map(function(x,i){return (i+1)+'. '+(x.intent==='ask'?'想了解：':'想訂購：')+x.name+(x.spec?'｜'+x.spec:'')+' ×'+(Number(x.qty)||1);}).join('\n')+'\n\n請協助確認優惠與後續方式，謝謝。';
   }
   function promptLine(title,text){
-    var prompt=title+'\n\n以下內容會帶到 QUEENA SELECT 官方 LINE：\n'+text+'\n\n按「確定」前往聊天室；進入 LINE 後，請再按「傳送」。訂購需等 Queena 回覆確認。';
+    var prompt=title+'\n\n以下內容會帶到 QUEENA SELECT 官方 LINE：\n'+text+'\n\n按「確定」前往官方客服協助\n「確認傳送後」我會盡快與您聯絡，謝謝。';
     if(window.confirm(prompt))window.location.href=oaUrl(text);
   }
   function askProduct(name){var n=String(name||'').trim();promptLine('詢問商品',n?'我想了解：'+n:GENERIC);}
@@ -9336,8 +9336,9 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     promptLine(t.classList.contains('checkoutLineLink')?'聯絡官方 LINE':'前往官方 LINE',anchorText(t));
   },true);
   function update(){
-    var b=document.getElementById('sendBtn');if(b){b.textContent='請 Queena 協助下單';b.setAttribute('aria-label','請 Queena 協助下單，將商品清單帶到官方 LINE');}
-    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='可選自助快速結帳；需要協助下單，請選官方 LINE。';});
+    var b=document.getElementById('sendBtn');if(b){b.textContent='客服協助下單';b.setAttribute('aria-label','客服協助下單，將商品清單帶到官方 LINE');}
+    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='可選自助快速結帳；需要客服協助下單，請按「客服協助下單」。';});
+    document.querySelectorAll('#lineFriendPrompt').forEach(function(x){x.style.display='none';x.hidden=true;});
     document.querySelectorAll('.checkoutLineLink').forEach(function(x){x.textContent='📌透過 QUEENA SELECT 官方 LINE 詢問';});
     normalize(document);
   }
