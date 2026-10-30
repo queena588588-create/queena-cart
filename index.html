@@ -4509,7 +4509,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
     </section>
     <footer class="qeFooter">
       <div class="qeFooterMain">
-       <nav class="qeFooterNav" aria-label="商城說明">
+  <nav class="qeFooterNav" aria-label="商城說明">
   <button type="button" class="qeFooterLink" data-qe-info="about">關於我</button>
   <button type="button" class="qeFooterLink" data-qe-info="payment">付款與配送</button>
   <button type="button" class="qeFooterLink" data-qe-info="faq">常見問題</button>
@@ -8634,7 +8634,7 @@ function openSharedQueenaProduct(){
     bodyEl.setAttribute('aria-busy','true');
     bodyEl.innerHTML='<span class="qeInfoLoading" role="status">正在開啟'+esc(infoTitles[key] || '商城說明')+'，請稍候 ♡</span>';
     loadInfo().then(function(data){
-      var lookupKey=key==='payment' ? 'shopping' : key;
+     var lookupKey=key;
       var item=data.find(function(x){return String(x.key||'')===lookupKey;});
       if(item && item.content) render(item); else failed();
     }).catch(failed);
