@@ -8992,7 +8992,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     form.elements.storeArea.required = !home;
     const paymentHint=document.getElementById('checkoutPaymentHint');
     paymentHint.hidden=false;
-    paymentHint.textContent=form.elements.payment.value==='LINE Pay'?'LINE Pay：送出訂單後，將訂單編號傳給官方客服，取得付款資訊。':form.elements.payment.value==='貨到付款'?'超商取貨付款：取件時付款；僅適用結帳頁提供此選項的超商訂單。':'銀行轉帳：送出訂單後查看付款資訊；如金額待確認，請先等官方客服確認再付款。匯款後可回報帳號末五碼。';
+    paymentHint.textContent=form.elements.payment.value==='LINE Pay'?'LINE Pay：送出訂單後，將訂單編號傳給官方客服，取得付款資訊。':form.elements.payment.value==='貨到付款'?'超商取貨付款：取件時付款。':'銀行轉帳：送出訂單後查看付款資訊；匯款後請提供帳號末五碼。';
     refreshShippingSummary();
   }
   function refreshShippingSummary(){
