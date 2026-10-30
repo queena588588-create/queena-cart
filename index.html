@@ -4510,7 +4510,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
           <button type="button" class="qeFooterLink" data-qe-info="faq">常見問題</button>
           <button type="button" class="qeFooterLink" data-qe-info="contact">聯繫我</button>
         </nav>
-        <div class="qeSocial"><a href="https://www.instagram.com/queena.520/" target="_blank" rel="noopener" aria-label="Instagram">IG</a><a href="https://line.me/R/oaMessage/%40753hvrac/" target="_blank" rel="noopener" aria-label="LINE">LINE</a></div>
+        <div class="qeSocial"><a href="https://www.instagram.com/queena.520/" target="_blank" rel="noopener" aria-label="Instagram">IG</a></div>
       </div>
       <div class="qeCopyright">© <span id="qeCopyrightYear"></span> QUEENA SELECT. All rights reserved.</div>
     </footer>
@@ -4706,7 +4706,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
 
       <p class="heroSub">
         喜歡的先加入清單，再選擇結帳方式<br>
-        想購買請選「客服協助下單」；想先詢問商品請選「我想了解」
+        可選「自助快速下單」，也可選「客服協助下單」
       </p>
 
       <div class="heroAction">
@@ -5034,7 +5034,7 @@ async function queenaFetchTimed_(url, options){
     const text=await response.text();
     return {ok:response.ok,status:response.status,text:async function(){return text;}};
   }catch(err){
-    if(err.name==='AbortError') throw new Error(options.method==='POST' ? '送單等待逾時，結果尚未確認；請先聯絡官方客服確認' : '連線等待逾時，請再試一次或使用自助快速結帳');
+    if(err.name==='AbortError') throw new Error(options.method==='POST' ? '送單等待逾時，結果尚未確認；請先聯絡官方客服確認' : '連線等待逾時，請再試一次或使用自助快速下單');
     throw err;
   }finally{clearTimeout(timeout);}
 }
@@ -6063,7 +6063,7 @@ function renderCartPanelLegacy_(){
 
             '<button type="button" class="intentBtn askBtn ' +
               (item.intent === 'ask' ? 'active' : '') +
-            '">💬 LINE 詢問商品</button>' +
+            '">💬 詢問客服此商品</button>' +
 
           '</div>' +
 
@@ -6384,7 +6384,7 @@ function createMessage(includeMoney){
       couponHtml;
   }
 
-  const promoHtml = '<div class="orderConfirmPromo">想購買請選「客服協助下單」；想先詢問商品請選「我想了解」</div>';
+  const promoHtml = '<div class="orderConfirmPromo">可選「自助快速下單」，也可選「客服協助下單」</div>';
 
   return (
     '<div class="orderConfirmBox">' +
@@ -6629,7 +6629,7 @@ function startFullLineLogin_(items){
         '客服協助下單';
 
       alert(
-        'LINE 確認暫時未完成：' + (err.message || String(err)) + '\n也可以選擇下方「自助快速結帳」。'
+        'LINE 確認暫時未完成：' + (err.message || String(err)) + '\n也可以選擇下方「自助快速下單」。'
       );
 
     });
@@ -7164,7 +7164,7 @@ function openProductDetail(productName){
       buyHtml +
       '<div class="productDetailActions">' +
         '<button type="button" id="productDetailBuy" class="productDetailBtn productDetailBuy">🛒 我要買</button>' +
-        '<button type="button" id="productDetailAsk" class="productDetailBtn productDetailAsk">💬 LINE 詢問商品</button>' +
+        '<button type="button" id="productDetailAsk" class="productDetailBtn productDetailAsk">💬 詢問客服此商品</button>' +
         '<button type="button" id="productDetailShare" class="productDetailBtn productDetailShare">↗ 分享這項商品</button>' +
       '</div>' +
     '</div>';
@@ -8801,7 +8801,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   if(!panel || !clearButton) return;
   const wrap = document.createElement('section');
   wrap.id = 'checkoutSection';
-  wrap.innerHTML = `<button type="button" id="openCheckout" class="actionBtn" style="background:#725b4c;color:white">🛒 自助快速結帳</button>
+  wrap.innerHTML = `<button type="button" id="openCheckout" class="actionBtn" style="background:#725b4c;color:white">🛒 自助快速下單</button>
   <form id="checkoutForm" novalidate hidden>
     <header class="checkoutIntro"><h3>填寫訂單資料</h3><p>結帳完成後 會盡快幫您出貨唷 </p></header>
     <fieldset class="checkoutCard"><legend><span>01</span> 聯絡資料</legend>
@@ -9010,7 +9010,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   function setCheckoutView(open){
     form.hidden=!open;messageBox.hidden=open;cartItems.hidden=open;sendBtn.hidden=open;clearButton.hidden=open;
     const prompt=document.getElementById('lineFriendPrompt');if(prompt)prompt.hidden=open;
-    document.getElementById('openCheckout').textContent=open?'← 返回商品清單':'🛒 自助快速結帳';
+    document.getElementById('openCheckout').textContent=open?'← 返回商品清單':'🛒 自助快速下單';
   }
   document.getElementById('editCartFromCheckout').addEventListener('click',function(){
     setCheckoutView(false);
@@ -9277,7 +9277,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     return heading+'\n'+lines+closing;
   }
   function promptLine(title,text){
-    var prompt=title+'\n\n以下內容會帶到 QUEENA SELECT 官方 LINE：\n'+text+'\n\n按「確定」前往官方客服\n確認傳送後，我會盡快與您聯絡，謝謝。';
+    var prompt=title+'\n\n以下內容會帶到 QUEENA SELECT 官方 LINE：\n'+text+'\n\n按「確定」前往官方客服\n進入客服後，請按「送出」傳送文字，我會盡快與您聯絡，謝謝。';
     if(window.confirm(prompt))window.location.href=oaUrl(text);
   }
   function askProduct(name){var n=String(name||'').trim();promptLine('詢問商品',n?'您好，我想了解以下商品：\n1. '+n+'\n\n請提供商品資訊，謝謝。':GENERIC);}
@@ -9305,7 +9305,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
   },true);
   function update(){
     var b=document.getElementById('sendBtn');if(b){b.textContent='客服協助下單';b.setAttribute('aria-label','客服協助下單，將商品清單帶到官方 LINE');}
-    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='想購買請選「客服協助下單」；想先詢問商品請選「我想了解」。';});
+    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='可選「自助快速下單」，也可選「客服協助下單」。';});
     document.querySelectorAll('#lineFriendPrompt').forEach(function(x){x.style.display='none';x.hidden=true;});
     document.querySelectorAll('.checkoutLineLink').forEach(function(x){x.textContent='📌透過 QUEENA SELECT 官方 LINE 詢問';});
     normalize(document);
