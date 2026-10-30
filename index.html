@@ -4509,13 +4509,14 @@ html[data-queena-share="1"] #queenaHomeEntry{
     </section>
     <footer class="qeFooter">
       <div class="qeFooterMain">
-  <nav class="qeFooterNav" aria-label="商城說明">
-  <button type="button" class="qeFooterLink" data-qe-info="about">關於我</button>
-  <button type="button" class="qeFooterLink" data-qe-info="payment">付款與配送</button>
-  <button type="button" class="qeFooterLink" data-qe-info="faq">常見問題</button>
-  <button type="button" class="qeFooterLink" data-qe-info="contact">聯繫我</button>
-</nav>
-        <div class="qeSocial"><a href="https://www.instagram.com/queena.520/" target="_blank" rel="noopener" aria-label="Instagram">IG</a><a href="https://line.me/ti/p/~0921730505" target="_blank" rel="noopener" aria-label="LINE">LINE</a></div>
+        <nav class="qeFooterNav" aria-label="商城說明">
+          <button type="button" class="qeFooterLink" data-qe-info="about">關於我</button>
+          <button type="button" class="qeFooterLink" data-qe-info="shopping">購物說明</button>
+          <button type="button" class="qeFooterLink" data-qe-info="payment">付款與配送</button>
+          <button type="button" class="qeFooterLink" data-qe-info="faq">常見問題</button>
+          <button type="button" class="qeFooterLink" data-qe-info="contact">聯繫我</button>
+        </nav>
+        <div class="qeSocial"><a href="https://www.instagram.com/queena.520/" target="_blank" rel="noopener" aria-label="Instagram">IG</a><a href="https://line.me/R/oaMessage/%40753hvrac/" target="_blank" rel="noopener" aria-label="LINE">LINE</a></div>
       </div>
       <div class="qeCopyright">© <span id="qeCopyrightYear"></span> QUEENA SELECT. All rights reserved.</div>
     </footer>
@@ -8387,7 +8388,7 @@ function openSharedQueenaProduct(){
 
   function openTarget(mode,name){
     if(mode === 'line'){
-      window.location.href = 'https://line.me/ti/p/~0921730505';
+      window.location.href = 'https://line.me/R/oaMessage/%40753hvrac/';
       return;
     }
     if(mode === 'collab'){
@@ -8634,14 +8635,14 @@ function openSharedQueenaProduct(){
     bodyEl.setAttribute('aria-busy','true');
     bodyEl.innerHTML='<span class="qeInfoLoading" role="status">正在開啟'+esc(infoTitles[key] || '商城說明')+'，請稍候 ♡</span>';
     loadInfo().then(function(data){
-     var lookupKey=key;
+      var lookupKey=key;
       var item=data.find(function(x){return String(x.key||'')===lookupKey;});
       if(item && item.content) render(item); else failed();
     }).catch(failed);
   }
   document.addEventListener('click',function(e){
     var btn=e.target.closest&&e.target.closest('[data-qe-info]');
-    if(btn){ e.preventDefault(); var key=btn.getAttribute('data-qe-info'); if(key==='contact'){ window.location.href='https://line.me/ti/p/~0921730505'; return; } showInfo(key); }
+    if(btn){ e.preventDefault(); var key=btn.getAttribute('data-qe-info'); if(key==='contact'){ window.location.href='https://line.me/R/oaMessage/%40753hvrac/'; return; } showInfo(key); }
     if(e.target===overlay) closeInfo();
   });
   if(closeBtn) closeBtn.addEventListener('click',closeInfo);
@@ -8847,7 +8848,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       <details class="checkoutOptional"><summary>填寫您的LINE (方便確認訂單及出貨狀態）</summary>
         <div class="checkoutGrid"><label>LINE ID<input name="lineId" maxlength="60" placeholder="不知道可以留白"></label><label>LINE 顯示名稱<input name="lineName" maxlength="60" placeholder="你在 LINE 使用的名稱"></label></div>
       </details>
-      <a class="checkoutLineLink" href="https://line.me/ti/p/aZ1M8UpSkD" target="_blank" rel="noopener noreferrer">📌加 Queena LINE 好友 ↗</a>
+      <a class="checkoutLineLink" href="https://line.me/R/oaMessage/%40753hvrac/" target="_blank" rel="noopener noreferrer">📌加 Queena LINE 好友 ↗</a>
     </fieldset>
     <fieldset class="checkoutCard"><legend><span>02</span> 收件配送</legend>
       <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option><option value="分開配送－7-11">分次出貨：宅配＋7-11</option><option value="分開配送－全家">分次出貨：宅配＋全家</option></select></label><p id="checkoutDeliveryHint" class="checkoutHint"></p><label id="splitShipmentsRow" class="checkoutCheck" hidden><input type="checkbox" name="splitShipments">我同意分次出貨（宅配＋超商取貨）</label>
@@ -9122,7 +9123,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       bankInfo.hidden=true;bankInfo.textContent='';if(countdownTimer)clearInterval(countdownTimer);
       if(payload.payment==='銀行轉帳'){
         const payPrompt=document.createElement('div');payPrompt.textContent='也可選 LINE Pay；請將訂單編號傳給 Queena。';bankInfo.appendChild(payPrompt);
-        const lineLink=document.createElement('a');lineLink.href='https://line.me/ti/p/aZ1M8UpSkD';lineLink.target='_blank';lineLink.rel='noopener noreferrer';lineLink.textContent='💚 開啟 Queena LINE';bankInfo.appendChild(lineLink);
+        const lineLink=document.createElement('a');lineLink.href='https://line.me/R/oaMessage/%40753hvrac/';lineLink.target='_blank';lineLink.rel='noopener noreferrer';lineLink.textContent='💚 開啟 Queena LINE';bankInfo.appendChild(lineLink);
         const separator=document.createElement('hr');separator.style.cssText='border:0;border-top:1px solid #eadfd8;margin:12px 0';bankInfo.appendChild(separator);
         if(data.bankTransfer){
           const bank=data.bankTransfer,deadline=data.paymentDueAt?new Date(data.paymentDueAt).getTime():0;
@@ -9152,7 +9153,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       const reportButton=document.getElementById('transferReportSubmit');reportButton.disabled=false;reportButton.textContent='我已轉帳';
       document.getElementById('transferReportStatus').textContent=payload.payment==='銀行轉帳'?(typeof data.totalAmount==='number'?'匯款後填寫末五碼；訂單維持待人工核帳，逾時也請回報並聯絡 Queena。':'請先等 Queena 確認最終應付金額，再匯款並填寫末五碼。'):payload.payment==='LINE Pay'?'請將訂單編號傳給 Queena，取得 LINE Pay 付款方式。':'';
       document.getElementById('copyOrderId').textContent='📋 複製訂單編號';
-      if(payload.payment!=='銀行轉帳'){const link=document.createElement('a');link.href='https://line.me/ti/p/aZ1M8UpSkD';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);}
+      if(payload.payment!=='銀行轉帳'){const link=document.createElement('a');link.href='https://line.me/R/oaMessage/%40753hvrac/';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟 Queena LINE';result.appendChild(document.createElement('br'));result.appendChild(link);}
       cart={};queenaLocalStorage.removeItem('queenaPendingCart');queenaLocalStorage.removeItem('queenaPendingSend');queenaSessionStorage.removeItem('queenaPendingCartBackup');queenaSessionStorage.removeItem('queenaPendingSendBackup');
       queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
       form.reset();toggleFields();syncReceiver();setCheckoutView(false);panel.classList.add('checkoutCompleted');requestId='';lastPayload='';
@@ -9210,7 +9211,7 @@ async function api(op,p){return apiPost('orderPortal',{dataJson:JSON.stringify(O
 function show(name){title.textContent=name;if(modal.hidden){previousFocus=document.activeElement;oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';}modal.hidden=false;document.getElementById('qmClose').focus();}
 function close(){if(busy)return;modal.hidden=true;document.body.style.overflow=oldOverflow;if(previousFocus&&previousFocus.focus)previousFocus.focus();}
 document.getElementById('qmClose').addEventListener('click',close);modal.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();close();}if(e.key==='Tab'){const a=Array.from(modal.querySelectorAll('button,input,select,textarea,a[href]')).filter(x=>!x.disabled&&x.getClientRects().length);if(!a.length)return;const first=a[0],last=a[a.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
-function contact(){const a=el('a','聯絡 Queena','qmBtn');a.href='https://line.me/ti/p/aZ1M8UpSkD';a.target='_blank';a.rel='noopener noreferrer';return a;}
+function contact(){const a=el('a','聯絡 Queena','qmBtn');a.href='https://line.me/R/oaMessage/%40753hvrac/';a.target='_blank';a.rel='noopener noreferrer';return a;}
 function lookupLink(id,token){return location.origin+location.pathname+'#order_lookup='+encodeURIComponent(id+':'+token);}
 async function copy(text,s){try{await navigator.clipboard.writeText(text);s.textContent='已複製，請妥善保存，勿公開此查詢連結。';}catch(e){const a=el('textarea');a.value=text;a.readOnly=true;s.appendChild(a);a.select();s.textContent='此裝置無法自動複製，請長按以下連結：';const a2=el('textarea');a2.value=text;a2.readOnly=true;s.appendChild(a2);}}
 function addMoney(box,label,n,cls){const row=el('div',null,'qmMoney'+(cls?' '+cls:''));row.append(el('span',label),el('strong',money(n)));box.appendChild(row);}
@@ -9294,6 +9295,56 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
  }
  setInterval(checkExpiry,15000);window.addEventListener('focus',checkExpiry);
 })();
+</script>
+
+<script>
+(function(){
+  'use strict';
+  var OA='@753hvrac';
+  var GENERIC='您好，我想詢問 QUEENA SELECT。';
+  function oaUrl(text){return 'https://line.me/R/oaMessage/'+encodeURIComponent(OA)+'/?'+encodeURIComponent(String(text||GENERIC));}
+  function cartItems(){try{return typeof queenaCartLines_==='function'?queenaCartLines_().filter(function(x){return Number(x.qty)>0;}):[];}catch(e){return [];}}
+  function cartText(items){
+    if(!items.length)return GENERIC;
+    return '您好，我想請 Queena 協助確認以下商品：\n'+items.map(function(x,i){return (i+1)+'. '+(x.intent==='ask'?'想了解：':'想訂購：')+x.name+(x.spec?'｜'+x.spec:'')+' ×'+(Number(x.qty)||1);}).join('\n')+'\n\n請協助確認優惠與後續方式，謝謝。';
+  }
+  function promptLine(title,text){
+    var prompt=title+'\n\n以下內容會帶到 QUEENA SELECT 官方 LINE：\n'+text+'\n\n按「確定」前往聊天室；進入 LINE 後，請再按「傳送」。訂購需等 Queena 回覆確認。';
+    if(window.confirm(prompt))window.location.href=oaUrl(text);
+  }
+  function askProduct(name){var n=String(name||'').trim();promptLine('詢問商品',n?'我想了解：'+n:GENERIC);}
+  if(typeof queenaAskOfficialLine_==='function')queenaAskOfficialLine_=askProduct;
+  function anchorText(a){
+    if(a.dataset.qeOfficialLineMessage)return a.dataset.qeOfficialLineMessage;
+    try{var u=new URL(a.href,location.href);if(u.pathname.indexOf('/R/oaMessage/')>=0&&u.search.length>1)return decodeURIComponent(u.search.slice(1).replace(/\+/g,'%20'));}catch(e){}
+    var order=document.querySelector('.checkoutSuccessOrder');if(order){var m=order.textContent.match(/[A-Za-z0-9_-]{6,}/);if(m)return '您好，我想詢問訂單：'+m[0]+'。';}
+    var items=cartItems();return items.length?cartText(items):GENERIC;
+  }
+  function normalize(root){(root||document).querySelectorAll('a[href*="line.me/"]').forEach(function(a){var text=anchorText(a);a.dataset.qeOfficialLineMessage=text;a.href=oaUrl(text);if(/開啟 Queena LINE|加 Queena LINE 好友/.test(a.textContent))a.textContent='💚 開啟官方 LINE';});}
+  document.addEventListener('click',function(e){
+    var el=e.target&&e.target.nodeType===1?e.target:e.target&&e.target.parentElement;
+    var t=el&&el.closest?el.closest('#sendBtn,.askBtn,[data-qe-info="contact"],[data-qe-mode="line"],a[href*="line.me/"]'):null;
+    if(!t)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(t.id==='sendBtn'){
+      var items=cartItems();if(!items.length){alert('請先把想詢問或訂購的商品加入清單。');return;}
+      if(typeof products!=='undefined'&&typeof queenaValidSpec_==='function'){var bad=items.find(function(x){var p=products.find(function(y){return y.name===x.name;})||{};return !Number.isSafeInteger(Number(x.qty))||Number(x.qty)<1||Number(x.qty)>99||!queenaValidSpec_(p,x.spec||'');});if(bad){alert('請先確認「'+bad.name+'」的規格與數量。');return;}}
+      promptLine('送出訂購協助',cartText(items));return;
+    }
+    if(t.classList.contains('askBtn')){var row=t.closest('.cartItem');askProduct(row&&row.querySelector('.cartName')?row.querySelector('.cartName').textContent:(typeof activeDetailProductName!=='undefined'?activeDetailProductName:''));return;}
+    if(t.matches('[data-qe-info="contact"]')){promptLine('聯絡 Queena',GENERIC);return;}
+    if(t.matches('[data-qe-mode="line"]')){var selected=cartItems();promptLine(selected.length?'送出訂購協助':'聯絡 Queena',selected.length?cartText(selected):GENERIC);return;}
+    promptLine(t.classList.contains('checkoutLineLink')?'聯絡官方 LINE':'前往官方 LINE',anchorText(t));
+  },true);
+  function update(){
+    var b=document.getElementById('sendBtn');if(b){b.textContent='請 Queena 協助下單';b.setAttribute('aria-label','請 Queena 協助下單，將商品清單帶到官方 LINE');}
+    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='可選自助快速結帳；需要協助下單，請選官方 LINE。';});
+    document.querySelectorAll('.checkoutLineLink').forEach(function(x){x.textContent='📌透過 QUEENA SELECT 官方 LINE 詢問';});
+    normalize(document);
+  }
+  update();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',update,{once:true});
+  if(typeof MutationObserver==='function')new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1)normalize(n.matches&&n.matches('a[href*="line.me/"]')?n.parentNode:n);});});}).observe(document.documentElement,{childList:true,subtree:true});
+})();
+
 </script>
 </body>
 </html>
