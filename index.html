@@ -4305,7 +4305,7 @@ html.shared-product-initial #queenaHomeEntry::after{
 }
 </style>
 
-<style>.cartQtyInput{width:56px;min-height:40px;text-align:center;border:1px solid #e5d4cd;border-radius:10px;font-size:16px;color:#5b433c;background:#fff;box-sizing:border-box}.mixFlavorGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mixFlavorGrid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5b433c}.mixFlavorGrid input{width:100%;min-height:40px;box-sizing:border-box;border:1px solid #e5d4cd;border-radius:8px;padding:6px;font-size:16px}.mixCountStatus{font-size:12px;line-height:1.6;color:#8f494d;margin:10px 0 0}@media(max-width:420px){.mixFlavorGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}</style><style>
+<style>.cartQtyInput{width:56px;min-height:40px;text-align:center;border:1px solid #e5d4cd;border-radius:10px;font-size:16px;color:#5b433c;background:#fff;box-sizing:border-box}.mixFlavorGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mixFlavorGrid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#5b433c}.mixFlavorGrid input{width:100%;min-height:40px;box-sizing:border-box;border:1px solid #e5d4cd;border-radius:8px;padding:6px;font-size:16px}.mixCountStatus{font-size:12px;line-height:1.6;color:#8f494d;margin:10px 0 0}@media(max-width:420px){.mixFlavorGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}</style><style>
 .qeVariants{width:100%;box-sizing:border-box}.qeVariantRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #eee4de}.qeVariantRow>label{display:flex;align-items:center;gap:9px;min-width:0;flex:1;font-size:14px;line-height:1.5}.qeVariantRow input[type=checkbox]{width:19px;height:19px;flex-shrink:0;accent-color:#96776b}.qeVariantRow small{display:block;font-size:12px;color:#9a7c70}.qeVariantQty{display:flex;align-items:center;gap:5px;flex-shrink:0}.qeVariantQty button{width:30px;height:34px;border:0;border-radius:50%;background:#faedcc;color:#775b4a;font-size:19px}.qeVariantQty input{width:48px;min-height:36px;box-sizing:border-box;border:1px solid #dfd1c8;border-radius:8px;text-align:center;font-size:16px;background:white}.qeVariantQty input:disabled{opacity:.4}.qeVariantQty input:invalid{border-color:#d33}.qeRemoveProduct{margin-top:12px;background:transparent;border:0;text-decoration:underline;color:#93796c;cursor:pointer}.qeVariants .cartSpecLabel{margin-bottom:6px}
 @media(max-width:480px){.qeVariants .qeVariantRow{gap:6px}.qeVariantRow>label{font-size:13px}.qeVariantQty button{width:26px}.qeVariantQty input{width:42px}}
 </style><style>
@@ -8829,7 +8829,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     </fieldset>
     <fieldset class="checkoutCard"><legend><span>03</span> 付款方式</legend>
       <label class="checkoutNoHeading"><span class="checkoutSrOnly">付款方式</span><select name="payment"><option value="銀行轉帳">銀行轉帳</option><option value="LINE Pay">LINE Pay</option><option value="貨到付款">貨到付款</option></select></label>
-      <p id="checkoutPaymentHint" class="checkoutHint">銀行轉帳：送出訂單後查看付款資訊；如金額待確認，請先等官方客服確認再付款。</p>
+      <p id="checkoutPaymentHint" class="checkoutHint">銀行轉帳：送出訂單後查看付款資訊；如金額待確認，請聯絡官方客服確認後再付款。</p>
       <label>備註（選填）<textarea name="note" maxlength="500" rows="2" placeholder="有其他需求可填在這裡"></textarea></label>
     </fieldset>
     <fieldset class="checkoutCard checkoutReview"><legend><span>04</span> 訂單確認</legend>
@@ -8839,7 +8839,6 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       <button type="button" id="editCartFromCheckout" class="checkoutEditCart">← 返回商品清單修改規格／數量</button>
       <div id="checkoutShippingSummary" aria-live="polite"></div>
     </fieldset>
-    <p class="checkoutHint"><button type="button" class="qeFooterLink" data-qe-info="payment">查看付款、運費與出貨說明</button></p>
     <label class="checkoutCheck checkoutConsent"><input name="consent" type="checkbox" required><span>同意上述資料用於本次訂單聯絡與配送。</span></label>
     <button type="submit" id="checkoutSubmit" class="actionBtn">確認並送出訂單</button>
   </form><div id="checkoutResult" role="status" aria-live="polite" style="white-space:pre-wrap;text-align:left"></div>
@@ -9097,7 +9096,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
             function updateCountdown(){
               const left=Math.max(0,deadline-Date.now());
               if(left===0){
-                timer.textContent='12 小時匯款時間已到；逾時匯款請先聯絡官方客服 人工確認。';
+                timer.textContent='您好，系統偵測到您的訂單過了 12 小時匯款時間；如逾時匯款請聯絡官方客服 協助確認。';
                 clearInterval(countdownTimer);
                 return;
               }
@@ -9114,7 +9113,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       }
       transferForm.reset();transferForm.elements.lastFive.disabled=false;
       const reportButton=document.getElementById('transferReportSubmit');reportButton.disabled=false;reportButton.textContent='我已轉帳';
-      document.getElementById('transferReportStatus').textContent=payload.payment==='銀行轉帳'?(typeof data.totalAmount==='number'?'匯款後填寫末五碼；訂單維持待人工核帳，逾時也請回報並聯絡官方客服。':'請先等官方客服確認最終應付金額，再匯款並填寫末五碼。'):payload.payment==='LINE Pay'?'請將訂單編號傳給官方客服，取得 LINE Pay 付款方式。':'';
+      document.getElementById('transferReportStatus').textContent=payload.payment==='銀行轉帳'?(typeof data.totalAmount==='number'?'匯款後填寫末五碼；快迅對帳，逾時請聯絡官方客服。':'官方客服再次確認訂單後，再匯款並填寫末五碼。'):payload.payment==='LINE Pay'?'請將訂單編號傳給官方客服，取得 LINE Pay 付款方式。':'';
       document.getElementById('copyOrderId').textContent='📋 複製訂單編號';
       if(payload.payment!=='銀行轉帳'){const link=document.createElement('a');link.href='https://line.me/R/oaMessage/%40753hvrac/';link.target='_blank';link.rel='noopener noreferrer';link.textContent='💚 開啟官方 LINE';result.appendChild(document.createElement('br'));result.appendChild(link);}
       cart={};queenaLocalStorage.removeItem('queenaPendingCart');queenaLocalStorage.removeItem('queenaPendingSend');queenaSessionStorage.removeItem('queenaPendingCartBackup');queenaSessionStorage.removeItem('queenaPendingSendBackup');
@@ -9305,7 +9304,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
   },true);
   function update(){
     var b=document.getElementById('sendBtn');if(b){b.textContent='客服協助下單';b.setAttribute('aria-label','客服協助下單，將商品清單帶到官方 LINE');}
-    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='可選「自助快速下單」，也可選「客服協助下單」。';});
+    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='歡迎「自助快速下單」，也可選「客服協助下單」。';});
     document.querySelectorAll('#lineFriendPrompt').forEach(function(x){x.style.display='none';x.hidden=true;});
     document.querySelectorAll('.checkoutLineLink').forEach(function(x){x.textContent='📌透過 QUEENA SELECT 官方 LINE 詢問';});
     normalize(document);
