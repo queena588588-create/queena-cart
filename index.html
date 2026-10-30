@@ -35,13 +35,13 @@
   <meta property="og:site_name" content="Queena SELECT">
   <meta property="og:title" content="♕ 塞爆你專屬購物車｜QUEENA SELECT">
  <meta property="og:description" content="Queena 的生活選物｜新品・熱銷・高回購愛用品 ♡">
-  <meta property="og:url" content="https://queena-cart.pages.dev/">
-  <meta property="og:image" content="https://queena-cart.pages.dev/queena-share.png">
+  <meta property="og:url" content="https://queena.tw/">
+  <meta property="og:image" content="https://queena.tw/queena-share.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="♕ 塞爆你專屬購物車｜QUEENA SELECT">
   <meta name="twitter:description" content="Queena 的生活選物｜新品・熱銷・高回購愛用品 ♡">
-  <meta name="twitter:image" content="https://queena-cart.pages.dev/queena-share.png">
-  <link rel="canonical" href="https://queena-cart.pages.dev/">
+  <meta name="twitter:image" content="https://queena.tw/queena-share.png">
+  <link rel="canonical" href="https://queena.tw/">
   <!-- QUEENA_DYNAMIC_OG_END -->
   <!-- Worker 會把商品快取直接放進這裡；Safari 不必再等前端 API 才能拿到商品。 -->
   <!-- QUEENA_PRODUCT_SEED -->
@@ -7935,13 +7935,13 @@ function getProductShareUrl(productName){
     }
     var version = (hash >>> 0).toString(36);
 
-    return window.location.origin +
+    return 'https://queena.tw' +
       '/p/' + encodeURIComponent(String(matchedProduct.row).trim()) +
       '?v=' + encodeURIComponent(version);
   }
 
   // 舊資料沒有 row 時才退回舊格式，避免分享功能失效。
-  return window.location.origin + '/?product=' + encodeURIComponent(targetName);
+  return 'https://queena.tw' + '/?product=' + encodeURIComponent(targetName);
 }
 
 function showShareToast(text){
