@@ -2258,7 +2258,7 @@ body{
 
 
 <style>
-/* ===== 我的清單：我要買 / 想了解 ===== */
+/* ===== 我的購物車：我要買 / 想了解 ===== */
 .cartItem{
   gap:16px !important;
 }
@@ -4689,7 +4689,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
 
     <div class="topMini">
 <button type="button" id="topWeeklyBtn" class="topMiniBtn">🔥 本週推薦</button>
-<button type="button" id="topCartBtn" class="topMiniBtn">🛍 我的清單 <span id="topCartCount">0</span></button>
+<button type="button" id="topCartBtn" class="topMiniBtn">🛍 我的購物車 <span id="topCartCount">0</span></button>
 </div>
 
   </div>
@@ -4856,7 +4856,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
   <div class="cartPanel">
 
     <div class="cartHeader">
-      <h2>My List｜我的清單</h2>
+      <h2>My Cart｜我的購物車</h2>
       <button id="closeCart" class="close">×</button>
     </div>
 
@@ -6021,7 +6021,7 @@ function renderCartPanelLegacy_(){
   if(items.length === 0){
 
     messageBox.innerHTML =
-      '<strong>🛍️ 我的清單</strong><br><br>還沒有加入商品 ♡';
+      '<strong>🛍️ 我的購物車</strong><br><br>還沒有加入商品 ♡';
 
     return;
   }
@@ -6390,9 +6390,7 @@ function createMessage(includeMoney){
       couponHtml;
   }
 
-  const promoHtml = hasPromoItem
-    ? '<div class="orderConfirmPromo">✨ 部分商品享本期活動優惠<br>Queena 會幫你確認最優惠的組合 ♡</div>'
-    : '';
+  const promoHtml = '<div class="orderConfirmPromo">可選自助結帳；商品相關協助請選 LINE 人工結帳</div>';
 
   return (
     '<div class="orderConfirmBox">' +
@@ -8865,8 +8863,8 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   actionGrid.setAttribute('role', 'group');
   actionGrid.setAttribute('aria-label', '選擇下單方式');
   panel.insertBefore(actionGrid, wrap);
-  actionGrid.appendChild(document.getElementById('sendBtn'));
   actionGrid.appendChild(document.getElementById('openCheckout'));
+  actionGrid.appendChild(document.getElementById('sendBtn'));
   actionGrid.appendChild(document.getElementById('lineFriendPrompt'));
 
   const style = document.createElement('style');
