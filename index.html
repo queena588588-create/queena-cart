@@ -8829,7 +8829,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     </fieldset>
     <fieldset class="checkoutCard"><legend><span>03</span> 付款方式</legend>
       <label class="checkoutNoHeading"><span class="checkoutSrOnly">付款方式</span><select name="payment"><option value="銀行轉帳">銀行轉帳</option><option value="LINE Pay">LINE Pay</option><option value="貨到付款">貨到付款</option></select></label>
-      <p id="checkoutPaymentHint" class="checkoutHint">銀行轉帳：送出訂單後查看付款資訊；如金額待確認，請聯絡官方客服確認後再付款。</p>
+      <p id="checkoutPaymentHint" class="checkoutHint">銀行轉帳：送出訂單後可查看付款資訊；如金額待確認，請聯絡官方客服確認後再付款。</p>
       <label>備註（選填）<textarea name="note" maxlength="500" rows="2" placeholder="有其他需求可填在這裡"></textarea></label>
     </fieldset>
     <fieldset class="checkoutCard checkoutReview"><legend><span>04</span> 訂單確認</legend>
@@ -8971,7 +8971,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     form.elements.storeArea.required = !home;
     const paymentHint=document.getElementById('checkoutPaymentHint');
     paymentHint.hidden=false;
-    paymentHint.textContent=form.elements.payment.value==='LINE Pay'?'LINE Pay：送出訂單後，將訂單編號傳給官方客服，取得付款資訊。':form.elements.payment.value==='貨到付款'?'超商取貨付款：取件時付款；僅適用結帳頁提供此選項的超商訂單。':'銀行轉帳：送出訂單後查看付款資訊；如金額待確認，請先等官方客服確認再付款。匯款後可回報帳號末五碼。';
+    paymentHint.textContent=form.elements.payment.value==='LINE Pay'?'LINE Pay：送出訂單後，將訂單編號傳給官方客服，取得付款資訊。':form.elements.payment.value==='貨到付款'?'超商取貨付款：取件時付款；僅適用結帳頁提供此選項的超商訂單。':'銀行轉帳：送出訂單後可查看付款資訊；如金額待確認，請聯絡官方客服後再付款。';
     refreshShippingSummary();
   }
   function refreshShippingSummary(){
