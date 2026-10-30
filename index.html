@@ -4497,8 +4497,8 @@ html[data-queena-share="1"] #queenaHomeEntry{
       <button type="button" class="qeFeatureCard qeHotspot" data-qe-mode="pick" aria-label="精選日常好物">
         <span class="qeFeatureArt"><svg viewBox="0 0 64 64"><path d="m10 24 22-12 22 12-22 12z"/><path d="M10 24v25l22 10 22-10V24M32 36v23"/><path d="m22 18 22 12"/></svg></span><span class="qeFeatureText"><span class="qeFeatureTitle">精選日常好物</span><span class="qeFeatureSub">不定期驚喜優惠<br>每一檔都值得逛 ♡</span><span class="qeFeatureBtn">逛逛最新活動　›</span></span>
       </button>
-      <button type="button" class="qeFeatureCard qeHotspot" data-qe-mode="all" aria-label="加入清單">
-        <span class="qeFeatureArt"><svg viewBox="0 0 64 64"><path d="M8 12h8l5 29h28l6-20H19"/><circle cx="26" cy="51" r="3"/><circle cx="47" cy="51" r="3"/></svg></span><span class="qeFeatureText"><span class="qeFeatureTitle">加入清單</span><span class="qeFeatureSub">一起把喜歡的收進來 ♡</span><span class="qeFeatureBtn">開始選購　›</span></span>
+      <button type="button" class="qeFeatureCard qeHotspot" data-qe-mode="all" aria-label="挑選商品">
+        <span class="qeFeatureArt"><svg viewBox="0 0 64 64"><path d="M8 12h8l5 29h28l6-20H19"/><circle cx="26" cy="51" r="3"/><circle cx="47" cy="51" r="3"/></svg></span><span class="qeFeatureText"><span class="qeFeatureTitle">挑選商品</span><span class="qeFeatureSub">一起把喜歡的收進來 ♡</span><span class="qeFeatureBtn">開始選購　›</span></span>
       </button>
     </section>
     <footer class="qeFooter">
@@ -4653,7 +4653,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
     </button>
     <button type="button" id="mCartBtn" class="mCartNav">
       <span class="mNavIcon">🛍</span>
-      <span>清單</span>
+      <span>購物車</span>
       <b id="mCartBadge" class="mCartBadge">0</b>
     </button>
   </nav>
@@ -4705,7 +4705,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
       </p>
 
       <p class="heroSub">
-        喜歡的先加入清單，再選擇結帳方式<br>
+        喜歡的商品先加入購物車，再選擇結帳方式<br>
         可選「自助快速下單」，也可選「客服協助下單」
       </p>
 
@@ -4841,7 +4841,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
   </div>
 
   <button id="viewCart" class="viewCart">
-    查看清單
+    查看購物車
   </button>
 </div>
 
@@ -4871,7 +4871,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
 
 
     <button id="clearBtn" class="actionBtn clearBtn">
-      🗑️ 清空清單
+      🗑️ 清空購物車
     </button>
 
   </div>
@@ -5496,8 +5496,8 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
           '">' +
             (
               selected
-                ? '✓ 已加入清單'
-                : '＋ 加入清單'
+                ? '✓ 已加入購物車'
+                : '＋ 加入購物車'
             ) +
           '</button>' +
 
@@ -5782,8 +5782,8 @@ function render(){
           '">' +
 
             (selected
-              ? '✓ 已加入清單'
-              : '＋ 加入清單'
+              ? '✓ 已加入購物車'
+              : '＋ 加入購物車'
             ) +
 
           '</button>' +
@@ -6417,7 +6417,7 @@ function createMessage(includeMoney){
 
 
 // ==============================
-// 查看清單
+// 查看購物車
 // ==============================
 
 document
@@ -6677,7 +6677,7 @@ function submitWishlist(items){
   if(!Array.isArray(items) || items.length === 0){
 
     pendingSubmitInFlight = false;
-    alert('購物清單沒有商品');
+    alert('購物車目前沒有商品');
     return;
   }
 
@@ -6802,9 +6802,9 @@ function handleLineOrderReceipt_(profile){
     overlay.classList.add('show');overlay.style.display='flex';
     let status=document.getElementById('lineReturnResult');
     if(!status){status=document.createElement('div');status.id='lineReturnResult';status.className='messageBox';messageBox.parentNode.insertBefore(status,messageBox.nextSibling);}
-    status.textContent=receipt.saved?'✅ LINE身分已確認，訂單已送出。'+(receipt.notice?'LINE已接受通知。':'請主動聯絡官方客服確認清單。'):'LINE身分已確認，清單尚未完成儲存：'+(receipt.error || '請聯絡官方客服確認');
+    status.textContent=receipt.saved?'✅ LINE身分已確認，訂單已送出。'+(receipt.notice?'LINE已接受通知。':'請主動聯絡官方客服確認訂單。'):'LINE身分已確認，訂單尚未完成儲存：'+(receipt.error || '請聯絡官方客服確認');
     showLineContactPrompt_();
-    alert(receipt.saved?'✅ LINE初步訂單已完成，官方客服會盡快與您確認訂單':'清單尚未完成儲存：'+(receipt.error || '請聯絡官方客服確認'));
+    alert(receipt.saved?'✅ LINE初步訂單已完成，官方客服會盡快與您確認訂單':'訂單尚未完成儲存：'+(receipt.error || '請聯絡官方客服確認'));
   },300);
   return true;
 }
@@ -7243,8 +7243,8 @@ function addProductFromDetail(intent){
   if(typeof showShareToast === 'function'){
     showShareToast(
       intent === 'ask'
-        ? '已加入清單：想了解 ♡'
-        : '已加入清單：我要買 ♡'
+        ? '已加入購物車：想了解 ♡'
+        : '已加入購物車：我要買 ♡'
     );
   }
 }
@@ -7355,7 +7355,7 @@ function mobileProductCard(p, badgeText){
 
         '<button type="button" class="mAddBtn ' +
           (selected ? 'selected' : '') +
-        '" aria-label="加入清單">' +
+        '" aria-label="加入購物車">' +
           (selected ? '✓' : '＋') +
         '</button>' +
       '</div>' +
@@ -8847,10 +8847,10 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       <label>備註（選填）<textarea name="note" maxlength="500" rows="2" placeholder="有其他需求可填在這裡"></textarea></label>
     </fieldset>
     <fieldset class="checkoutCard checkoutReview"><legend><span>04</span> 訂單確認</legend>
-      <p class="checkoutReviewHint">請核對商品、規格和數量；需要修改時可返回清單。</p>
+      <p class="checkoutReviewHint">請核對商品、規格和數量；需要修改時可返回購物車。</p>
       <div id="checkoutSpecWarning" role="status" aria-live="polite" hidden></div>
       <div id="checkoutSummary"></div>
-      <button type="button" id="editCartFromCheckout" class="checkoutEditCart">← 返回商品清單修改規格／數量</button>
+      <button type="button" id="editCartFromCheckout" class="checkoutEditCart">← 返回購物車修改規格／數量</button>
       <div id="checkoutShippingSummary" aria-live="polite"></div>
     </fieldset>
     <label class="checkoutCheck checkoutConsent"><input name="consent" type="checkbox" required><span>同意上述資料用於本次訂單聯絡與配送。</span></label>
@@ -9023,7 +9023,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   function setCheckoutView(open){
     form.hidden=!open;messageBox.hidden=open;cartItems.hidden=open;sendBtn.hidden=open;clearButton.hidden=open;
     const prompt=document.getElementById('lineFriendPrompt');if(prompt)prompt.hidden=open;
-    document.getElementById('openCheckout').textContent=open?'← 返回商品清單':'🛒 自助快速下單';
+    document.getElementById('openCheckout').textContent=open?'← 返回購物車':'🛒 自助快速下單';
   }
   document.getElementById('editCartFromCheckout').addEventListener('click',function(){
     setCheckoutView(false);
@@ -9038,7 +9038,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       return product && (!Number.isSafeInteger(Number(item.qty)) || Number(item.qty)<1 || Number(item.qty)>99 || !queenaValidSpec_(product,item.spec || ''));
     });
     warning.hidden=!missing.length;
-    warning.textContent=missing.length?'尚有商品未選規格：'+missing.map(function(item){return item.name;}).join('、')+'。請返回商品清單選擇後再送出。':'';
+    warning.textContent=missing.length?'尚有商品未選規格：'+missing.map(function(item){return item.name;}).join('、')+'。請返回購物車選擇後再送出。':'';
   }
   document.getElementById('openCheckout').addEventListener('click',function(){
     const items = queenaCartLines_();
@@ -9307,7 +9307,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     var t=el&&el.closest?el.closest('#sendBtn,.askBtn,[data-qe-info="contact"],[data-qe-mode="line"],a[href*="line.me/"]'):null;
     if(!t)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
     if(t.id==='sendBtn'){
-      var items=cartItems();if(!items.length){alert('請先把想詢問或訂購的商品加入清單。');return;}
+      var items=cartItems();if(!items.length){alert('請先把想詢問或訂購的商品加入購物車。');return;}
       if(typeof products!=='undefined'&&typeof queenaValidSpec_==='function'){var bad=items.find(function(x){var p=products.find(function(y){return y.name===x.name;})||{};return !Number.isSafeInteger(Number(x.qty))||Number(x.qty)<1||Number(x.qty)>99||!queenaValidSpec_(p,x.spec||'');});if(bad){alert('請先確認「'+bad.name+'」的規格與數量。');return;}}
       promptLine(items.every(function(x){return x.intent==='ask';})?'確認商品詢問':items.every(function(x){return x.intent!=='ask';})?'確認客服協助下單':'確認商品需求',cartText(items));return;
     }
@@ -9317,7 +9317,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     promptLine(t.classList.contains('checkoutLineLink')?'聯絡官方 LINE':'前往官方 LINE',anchorText(t));
   },true);
   function update(){
-    var b=document.getElementById('sendBtn');if(b){b.textContent='客服協助下單';b.setAttribute('aria-label','客服協助下單，將商品清單帶到官方 LINE');}
+    var b=document.getElementById('sendBtn');if(b){b.textContent='客服協助下單';b.setAttribute('aria-label','客服協助下單，將購物車商品帶到官方 LINE');}
     document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='可選「自助快速下單」，也可選「客服協助下單」。';});
     document.querySelectorAll('#lineFriendPrompt').forEach(function(x){x.style.display='none';x.hidden=true;});
     document.querySelectorAll('.checkoutLineLink').forEach(function(x){x.textContent='📌透過 QUEENA SELECT 官方 LINE 詢問';});
