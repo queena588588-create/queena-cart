@@ -9098,7 +9098,18 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
           [['銀行',bank.bankName],['戶名',bank.accountName],['帳號',bank.accountNumber],['應付金額',typeof data.totalAmount==='number'?'$'+Number(data.totalAmount).toLocaleString('zh-TW'):'待 Queena 確認']].forEach(function(pair){const row=document.createElement('div');row.textContent=pair[0]+'：'+pair[1];bankInfo.appendChild(row);});
           if(typeof data.totalAmount==='number' && data.paymentDueAt){
             const timer=document.createElement('div');timer.id='paymentCountdown';timer.setAttribute('role','timer');bankInfo.appendChild(timer);bankInfo.hidden=false;
-            function updateCountdown(){const left=Math.max(0,deadline-Date.now());if(left===0){timer.textContent='30 分鐘匯款時間已到；逾時匯款請先聯絡 Queena 人工確認。';clearInterval(countdownTimer);return;}const mins=Math.floor(left/60000),secs=Math.floor(left%60000/1000);timer.textContent='請於 '+String(mins).padStart(2,'0')+':'+String(secs).padStart(2,'0')+' 內完成匯款';}
+            function updateCountdown(){
+              const left=Math.max(0,deadline-Date.now());
+              if(left===0){
+                timer.textContent='12 小時匯款時間已到；逾時匯款請先聯絡 Queena 人工確認。';
+                clearInterval(countdownTimer);
+                return;
+              }
+              const hours=Math.floor(left/3600000);
+              const mins=Math.floor(left%3600000/60000);
+              const secs=Math.floor(left%60000/1000);
+              timer.textContent='請於 '+String(hours).padStart(2,'0')+':'+String(mins).padStart(2,'0')+':'+String(secs).padStart(2,'0')+' 內完成匯款';
+            }
             updateCountdown();countdownTimer=setInterval(updateCountdown,1000);
           }else{
             const note=document.createElement('div');note.textContent='商品優惠金額確認後再匯款，確認後再開始計算付款時間。運費依訂單確認明細計算。';bankInfo.appendChild(note);bankInfo.hidden=false;
