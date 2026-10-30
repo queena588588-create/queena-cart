@@ -4416,6 +4416,22 @@ html.shared-product-initial #queenaHomeEntry::after{
 #checkoutResult .checkoutSuccessOrder{display:block;margin:0 0 20px;font-size:clamp(20px,5vw,26px);font-weight:800;line-height:1.4;color:#594238;overflow-wrap:anywhere}
 </style>
 <style>.qeDeliveryInfo{font-size:12px;line-height:1.65;color:#826b58;background:#fff8ec;border-radius:8px;padding:6px 8px;margin:7px 0;overflow-wrap:anywhere}.cartProductText .qeDeliveryInfo{margin-top:10px}</style>
+<style>
+/* 商品詳情多圖；商品列表仍使用第一張封面。 */
+.qeGallery{background:#fff7f3;border-radius:18px;overflow:hidden;margin-bottom:16px;}
+.qeGalleryTrack{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none;}
+.qeGalleryTrack::-webkit-scrollbar{display:none;}
+.qeGalleryPhoto{flex:0 0 100%;min-width:0;scroll-snap-align:start;background:transparent;border:0;padding:0;cursor:zoom-in;}
+.qeGalleryPhoto img{display:block;width:100%;height:auto;max-height:55vh;object-fit:contain;}
+.qeGalleryControls{display:flex;align-items:center;justify-content:center;gap:22px;padding:8px;}
+.qeGalleryControls button{width:44px;height:44px;border:1px solid #e7b9c5;border-radius:50%;background:white;color:#a42f57;font-size:28px;cursor:pointer;}
+.qeGalleryCount{font-size:15px;color:#684b46;font-weight:bold;}
+.qeGalleryHint{text-align:center;padding:4px 10px 12px;color:#785b55;font-size:13px;}
+.qePhotoZoom{border:0;padding:56px 12px 12px;background:#fffaf7;border-radius:16px;max-width:94vw;max-height:90dvh;box-sizing:border-box;}
+.qePhotoZoom::backdrop{background:rgba(0,0,0,.8);}
+.qePhotoZoom img{display:block;max-width:85vw;max-height:75dvh;object-fit:contain;}
+.qePhotoZoom button{position:absolute;right:10px;top:8px;min-height:40px;padding:6px 16px;border:0;border-radius:22px;background:#a42f57;color:white;font-size:16px;cursor:pointer;}
+</style>
 </head>
 
 <body>
@@ -7039,6 +7055,44 @@ function closeProductDetail(){
   activeDetailProductName = '';
 }
 
+
+function queenaProductPhotos_(product){
+  const raw = (Array.isArray(product.photos) ? product.photos : [])
+    .concat(String(product.photo || '').split(/[,，\r\n]+/));
+  return Array.from(new Set(raw.map(function(url){return String(url || '').trim();})
+    .filter(function(url){return /^https?:\/\//i.test(url);}))).slice(0,3);
+}
+function queenaGalleryHtml_(product){
+  const photos=queenaProductPhotos_(product);
+  if(!photos.length) return '<div class="productDetailPhotoWrap"><div class="productDetailNoPhoto">🛍️</div></div>';
+  return '<div class="qeGallery" aria-label="商品照片">'+
+    '<div class="qeGalleryTrack">'+photos.map(function(url,i){
+      return '<button type="button" class="qeGalleryPhoto" aria-label="放大商品照片 '+(i+1)+'"><img src="'+mobileEscape(url)+'" alt="'+mobileEscape(product.name||'商品')+' — 照片 '+(i+1)+'" decoding="async"></button>';
+    }).join('')+'</div>'+ (photos.length>1 ?
+    '<div class="qeGalleryControls"><button type="button" data-gallery-step="-1" aria-label="上一張照片">‹</button><span class="qeGalleryCount" aria-live="polite">1／'+photos.length+'</span><button type="button" data-gallery-step="1" aria-label="下一張照片">›</button></div>' : '')+
+    '<div class="qeGalleryHint">'+(photos.length>1?'左右滑動看更多・':'')+'點照片放大</div></div>';
+}
+function queenaBindGallery_(body){
+  const gallery=body.querySelector('.qeGallery'); if(!gallery)return;
+  const track=gallery.querySelector('.qeGalleryTrack');
+  const slides=Array.from(track.children);const count=gallery.querySelector('.qeGalleryCount');
+  function current(){return Math.max(0,Math.min(slides.length-1,Math.round(track.scrollLeft/(track.clientWidth||1))));}
+  track.addEventListener('scroll',function(){if(count)count.textContent=(current()+1)+'／'+slides.length;},{passive:true});
+  gallery.querySelectorAll('[data-gallery-step]').forEach(function(button){
+    button.addEventListener('click',function(){const i=(current()+Number(button.dataset.galleryStep)+slides.length)%slides.length;track.scrollTo({left:i*track.clientWidth,behavior:'smooth'});});
+  });
+  slides.forEach(function(slide){slide.addEventListener('click',function(){
+    const dialog=document.createElement('dialog');dialog.className='qePhotoZoom';
+    const close=document.createElement('button');close.type='button';close.textContent='✕ 關閉';close.setAttribute('aria-label','關閉放大照片');
+    const img=document.createElement('img');img.src=slide.querySelector('img').src;img.alt=slide.querySelector('img').alt;
+    dialog.append(close,img);document.body.appendChild(dialog);
+    close.addEventListener('click',function(){dialog.close();});
+    dialog.addEventListener('click',function(e){if(e.target===dialog)dialog.close();});
+    dialog.addEventListener('close',function(){dialog.remove();slide.focus();},{once:true});
+    dialog.showModal();close.focus();
+  });});
+}
+
 function openProductDetail(productName){
   const product = findQueenaProductByName(productName);
   const overlay = document.getElementById('productDetailOverlay');
@@ -7048,17 +7102,7 @@ function openProductDetail(productName){
 
   activeDetailProductName = String(product.name || '').trim();
 
-  const photoHtml = product.photo
-    ? '<div class="productDetailPhotoWrap">' +
-        '<img class="productDetailPhoto" loading="lazy" decoding="async" src="' +
-          mobileEscape(product.photo) +
-        '" alt="' +
-          mobileEscape(product.name || '') +
-        '">' +
-      '</div>'
-    : '<div class="productDetailPhotoWrap">' +
-        '<div class="productDetailNoPhoto">🛍️</div>' +
-      '</div>';
+  const photoHtml = queenaGalleryHtml_(product);
 
   const categoryHtml = product.category
     ? '<div class="productDetailCategory">' +
@@ -7120,6 +7164,7 @@ function openProductDetail(productName){
       '</div>' +
     '</div>';
 
+  queenaBindGallery_(body);
   overlay.classList.add('show');
   overlay.setAttribute('aria-hidden','false');
   document.body.classList.add('product-detail-open');
