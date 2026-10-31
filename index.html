@@ -4445,6 +4445,7 @@ html.shared-product-initial #queenaHomeEntry::after{
 #qnbApp h1:focus{outline:none}
 
 </style>
+<style id="queenaCartLifecycleStyle">#overlay:not(.qeCartOpen){display:none!important}#overlay.qeCartOpen{display:flex!important}</style>
 </head>
 
 <body>
@@ -4864,7 +4865,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
 </div>
 
 
-<div id="overlay" class="overlay">
+<div id="overlay" class="overlay" aria-hidden="true">
 
   <div class="cartPanel">
 
@@ -4903,6 +4904,31 @@ html[data-queena-share="1"] #queenaHomeEntry{
 </div>
 
 
+<script>
+// 購物車開關集中管理：初次載入與瀏覽器返回，不沿用先前展開狀態。
+function queenaCloseCart_(){
+  const panel=document.getElementById('overlay');
+  if(!panel)return;
+  panel.classList.remove('qeCartOpen','show');
+  panel.style.display='none';
+  panel.setAttribute('aria-hidden','true');
+}
+function queenaOpenCart_(){
+  const panel=document.getElementById('overlay');
+  if(!panel)return;
+  panel.classList.add('qeCartOpen');
+  panel.style.display='flex';
+  panel.setAttribute('aria-hidden','false');
+}
+(function(){
+  queenaCloseCart_();
+  window.addEventListener('pageshow',function(event){
+    // BFCache 會保留舊 DOM：回到網站時不要恢復之前的展開購物車。
+    if(event.persisted)queenaCloseCart_();
+  });
+})();
+
+</script>
 <script>
 
 let products = [];
@@ -6458,7 +6484,7 @@ document
 
     showLineContactPrompt_();
 
-    overlay.style.display = 'flex';
+    queenaOpenCart_();
 
   });
 
@@ -6467,7 +6493,7 @@ document
   .getElementById('closeCart')
   .addEventListener('click', function(){
 
-    overlay.style.display = 'none';
+    queenaCloseCart_();
 
   });
 
@@ -6475,7 +6501,7 @@ document
 overlay.addEventListener('click', function(e){
 
   if(e.target === overlay){
-    overlay.style.display = 'none';
+    queenaCloseCart_();
   }
 
 });
@@ -6817,7 +6843,7 @@ function handleLineOrderReceipt_(profile){
     updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
   }
   setTimeout(function(){
-    overlay.classList.add('show');overlay.style.display='flex';
+    queenaOpenCart_();
     let status=document.getElementById('lineReturnResult');
     if(!status){status=document.createElement('div');status.id='lineReturnResult';status.className='messageBox';messageBox.parentNode.insertBefore(status,messageBox.nextSibling);}
     status.textContent=receipt.saved?'✅ LINE身分已確認，訂單已送出。'+(receipt.notice?'LINE已接受通知。':'請主動聯絡官方客服確認訂單。'):'LINE身分已確認，訂單尚未完成儲存：'+(receipt.error || '請聯絡官方客服確認');
@@ -7011,7 +7037,7 @@ document.addEventListener('DOMContentLoaded',function(){
   if(cartBtn) cartBtn.addEventListener('click',function(){
     if(typeof renderCartPanel==='function') renderCartPanel();
     const ov=document.getElementById('overlay');
-    if(ov) ov.style.display='flex';
+    if(ov) queenaOpenCart_();
   });
 
   function syncTopCount(){
@@ -7752,7 +7778,7 @@ function openMobileCart(){
     document.getElementById('overlay');
 
   if(ov){
-    ov.style.display = 'flex';
+    queenaOpenCart_();
   }
 }
 
