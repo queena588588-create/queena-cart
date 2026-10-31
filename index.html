@@ -4446,6 +4446,7 @@ html.shared-product-initial #queenaHomeEntry::after{
 
 </style>
 <style id="queenaCartLifecycleStyle">#overlay:not(.qeCartOpen){display:none!important}#overlay.qeCartOpen{display:flex!important}</style>
+<style>.qeLineReturnNotice{padding:12px 18px;background:#fff1e8;color:#755047;font-size:14px;line-height:1.8;border-bottom:1px solid #eedcd4}</style>
 </head>
 
 <body>
@@ -4905,27 +4906,26 @@ html[data-queena-share="1"] #queenaHomeEntry{
 
 
 <script>
-// 購物車開關集中管理：初次載入與瀏覽器返回，不沿用先前展開狀態。
+// 只有使用者實際點擊購物車入口，才允許展開；初始化、資料同步與登入返回均不自動展開。
+let queenaCartIntentUntil_ = 0;
 function queenaCloseCart_(){
-  const panel=document.getElementById('overlay');
-  if(!panel)return;
-  panel.classList.remove('qeCartOpen','show');
-  panel.style.display='none';
-  panel.setAttribute('aria-hidden','true');
+  queenaCartIntentUntil_=0;
+  const panel=document.getElementById('overlay');if(!panel)return;
+  panel.classList.remove('qeCartOpen','show');panel.style.display='none';panel.setAttribute('aria-hidden','true');
 }
 function queenaOpenCart_(){
-  const panel=document.getElementById('overlay');
-  if(!panel)return;
-  panel.classList.add('qeCartOpen');
-  panel.style.display='flex';
-  panel.setAttribute('aria-hidden','false');
+  if(Date.now()>queenaCartIntentUntil_)return false;
+  queenaCartIntentUntil_=0;
+  const panel=document.getElementById('overlay');if(!panel)return false;
+  panel.classList.add('qeCartOpen');panel.style.display='flex';panel.setAttribute('aria-hidden','false');return true;
 }
 (function(){
+  document.addEventListener('click',function(event){
+    const target=event.target&&event.target.closest?event.target.closest('#viewCart,#floatingCartBtn,#topCartBtn,#mCartBtn,[data-qe-open-cart],#lineReceiptOpenCart'):null;
+    if(event.isTrusted&&target)queenaCartIntentUntil_=Date.now()+1200;
+  },true);
   queenaCloseCart_();
-  window.addEventListener('pageshow',function(event){
-    // BFCache 會保留舊 DOM：回到網站時不要恢復之前的展開購物車。
-    if(event.persisted)queenaCloseCart_();
-  });
+  window.addEventListener('pageshow',function(event){if(event.persisted)queenaCloseCart_();});
 })();
 
 </script>
@@ -6842,14 +6842,14 @@ function handleLineOrderReceipt_(profile){
     queenaLocalStorage.removeItem(QUEENA_COUPON_KEY);cart={};
     updateCart();render();if(typeof renderMobileApp==='function')renderMobileApp();
   }
-  setTimeout(function(){
-    queenaOpenCart_();
-    let status=document.getElementById('lineReturnResult');
-    if(!status){status=document.createElement('div');status.id='lineReturnResult';status.className='messageBox';messageBox.parentNode.insertBefore(status,messageBox.nextSibling);}
-    status.textContent=receipt.saved?'✅ LINE身分已確認，訂單已送出。'+(receipt.notice?'LINE已接受通知。':'請主動聯絡官方客服確認訂單。'):'LINE身分已確認，訂單尚未完成儲存：'+(receipt.error || '請聯絡官方客服確認');
-    showLineContactPrompt_();
-    alert(receipt.saved?'✅ LINE初步訂單已完成，官方客服會盡快與您確認訂單':'訂單尚未完成儲存：'+(receipt.error || '請聯絡官方客服確認'));
-  },300);
+  // 登入結果只顯示提示，不打開購物車，也不彈出 alert。
+  const receiptText=receipt.saved?'✅ LINE身分已確認，訂單已送出。'+(receipt.notice?'LINE已接受通知。':'請主動聯絡官方客服確認訂單。'):'LINE身分已確認，訂單尚未完成儲存：'+(receipt.error || '請聯絡官方客服確認');
+  let status=document.getElementById('lineReturnResult');
+  if(!status){status=document.createElement('div');status.id='lineReturnResult';status.className='messageBox';messageBox.parentNode.insertBefore(status,messageBox.nextSibling);}
+  status.textContent=receiptText;
+  const parents=[document.getElementById('queenaHomeEntry'),document.querySelector('#mobileSite .mHeader'),document.querySelector('.shopTop')].filter(Boolean);
+  parents.forEach(function(parent){let notice=parent.querySelector('.qeLineReturnNotice');if(!notice){notice=document.createElement('div');notice.className='qeLineReturnNotice';notice.setAttribute('role','status');parent.prepend(notice);}notice.textContent=receiptText;});
+
   return true;
 }
 
@@ -9388,7 +9388,7 @@ function link(text,url,cls){const a=el('a',text,cls);a.href=url;return a;}
 function noteHref(id){const u=new URL('/',location.href);u.hash='notebook/'+encodeURIComponent(id);return u.href;}
 function browse(){close();const u=new URL(location.href);if(u.pathname!=='/'||u.searchParams.has('product')){location.assign('/');return;}if(typeof window.queenaShowEntryHome==='function')window.queenaShowEntryHome();else{const home=document.getElementById('queenaHomeEntry');if(home)home.style.display='';}}
 function cart(){close();const home=document.getElementById('queenaHomeEntry');if(home)home.style.display='none';const b=document.getElementById('viewCart');if(b)b.click();}
-function makeNav(active){const n=el('nav',null,'qnbNav');n.setAttribute('aria-label','主要分頁');n.append(button('逛商品',browse),button('購物車',cart));const b=button('👑 懶人筆記',function(){go('');});if(active)b.setAttribute('aria-current','page');n.appendChild(b);return n;}
+function makeNav(active){const n=el('nav',null,'qnbNav');n.setAttribute('aria-label','主要分頁');const cartEntry=button('購物車',cart);cartEntry.setAttribute('data-qe-open-cart','1');n.append(button('逛商品',browse),cartEntry);const b=button('👑 懶人筆記',function(){go('');});if(active)b.setAttribute('aria-current','page');n.appendChild(b);return n;}
 function close(){if(!opened)return;app.hidden=true;document.body.style.overflow=oldOverflow;opened=false;if(location.hash.indexOf('#notebook')===0)history.replaceState(null,'',location.pathname+location.search);if(lastFocus&&lastFocus.isConnected)lastFocus.focus();}
 function go(id){const h='#notebook'+(id?'/'+encodeURIComponent(id):'');if(location.hash!==h)history.pushState(null,'',h);open(id);}
 function showState(text,retry){wrap.replaceChildren();const box=el('div',text,'qnbState');box.setAttribute('role','status');if(retry){box.append(el('br'));box.append(button('重新載入',function(){loaded=false;open(currentId());},'qnbButton'));}wrap.appendChild(box);}
