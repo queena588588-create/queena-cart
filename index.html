@@ -5918,7 +5918,7 @@ function queenaMixRead_(p,spec){
 function queenaValidSpec_(p,spec){
  spec=queenaCleanSelected_(spec);
  if(queenaMixConfig_(p))return queenaMixRead_(p,spec).valid;
- const prices=queenaPriceChoices_(p),opts=queenaProductOptions_(p);
+ const prices=queenaPriceChoices_(p),opts=queenaProductOptions_(p).filter(function(s){return !prices.some(function(x){return x.label===s;});});
  if(prices.length>1){
    const parts=String(spec||'').split('｜');
    if(!prices.some(function(x){return x.label===parts[0];}))return false;
@@ -5934,7 +5934,7 @@ function getProductSpecs(product){return queenaProductOptions_(product);}
 // V12: selected variants become independent order lines, with no client prices.
 function queenaVariantOptions_(p){
   if(queenaMixConfig_(p))return [];
-  const prices=queenaPriceChoices_(p),specs=getProductSpecs(p);
+  const prices=queenaPriceChoices_(p),specs=getProductSpecs(p).filter(function(s){return !prices.some(function(x){return x.label===s;});});
   if(prices.length>1){
     return prices.reduce(function(list,price){
       return list.concat(specs.length?specs.map(function(spec){return price.label+'｜'+spec;}):[price.label]);
