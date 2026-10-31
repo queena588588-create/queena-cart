@@ -3,6 +3,45 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<!-- Google Analytics 4: QUEENA SELECT -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y77DM0Z9RK"></script>
+<script>
+// Only public catalog identifiers are included; never send form values or LINE tokens.
+window.dataLayer = window.dataLayer || [];
+function gtag(){window.dataLayer.push(arguments);}
+function qeAnalyticsUrl_(raw){
+  if(!raw)return '';
+  try{var u=new URL(raw,location.href);return u.origin+u.pathname;}catch(e){return '';}
+}
+function qeTrack_(name,params){
+  try{gtag('event',name,Object.assign({page_location:qeAnalyticsUrl_(location.href),page_referrer:qeAnalyticsUrl_(document.referrer)},params||{}));}catch(e){}
+}
+function qeAnalyticsItem_(line){
+  var p=typeof products!=='undefined'?products.find(function(p){return p.name===line.name;}):null;
+  var item={item_id:String(p&&p.row||line.name||'').slice(0,100),item_name:String(line.name||'').slice(0,100),quantity:Number(line.qty)||1};
+  if(p&&p.category)item.item_category=String(p.category).slice(0,100);
+  if(line.spec)item.item_variant=String(line.spec).slice(0,100);
+  return item;
+}
+var qeAnalyticsCartPrevious_={};
+function qeTrackCartChange_(){
+  try{
+    var next={},lines=queenaCartLines_();
+    lines.forEach(function(line){var key=String(line.name);if(!next[key])next[key]={line:line,qty:0};next[key].qty+=Number(line.qty)||1;});
+    Object.keys(next).forEach(function(key){var added=next[key].qty-(qeAnalyticsCartPrevious_[key]||0);if(added>0){var item=qeAnalyticsItem_(next[key].line);item.quantity=added;qeTrack_('add_to_cart',{currency:'TWD',items:[item]});}});
+    qeAnalyticsCartPrevious_={};Object.keys(next).forEach(function(key){qeAnalyticsCartPrevious_[key]=next[key].qty;});
+  }catch(e){}
+}
+gtag('js',new Date());
+gtag('config','G-Y77DM0Z9RK',{
+  page_location:qeAnalyticsUrl_(location.href),
+  page_referrer:qeAnalyticsUrl_(document.referrer),
+  allow_google_signals:false,
+  allow_ad_personalization_signals:false
+});
+
+</script>
+
   <script defer charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -4917,7 +4956,7 @@ function queenaOpenCart_(){
   if(Date.now()>queenaCartIntentUntil_)return false;
   queenaCartIntentUntil_=0;
   const panel=document.getElementById('overlay');if(!panel)return false;
-  panel.classList.add('qeCartOpen');panel.style.display='flex';panel.setAttribute('aria-hidden','false');return true;
+  panel.classList.add('qeCartOpen');panel.style.display='flex';panel.setAttribute('aria-hidden','false');qeTrack_('view_cart',{currency:'TWD',items:queenaCartLines_().map(qeAnalyticsItem_)});return true;
 }
 (function(){
   document.addEventListener('click',function(event){
@@ -5917,6 +5956,7 @@ function updateCart(){
 
   renderCartPanel();
   updateQueenaCouponDisplay();
+  qeTrackCartChange_();
 
 }
 
@@ -7170,6 +7210,7 @@ function openProductDetail(productName){
   if(!product || !overlay || !body) return;
 
   activeDetailProductName = String(product.name || '').trim();
+  qeTrack_('view_item',{currency:'TWD',items:[qeAnalyticsItem_({name:product.name,qty:1})]});
 
   const photoHtml = queenaGalleryHtml_(product);
 
@@ -8013,6 +8054,7 @@ async function copyQueenaText(text){
 }
 
 async function shareQueenaProduct(productName){
+  qeTrack_('share_click',{content_type:'product',item_id:String(productName||'').slice(0,100)});
 
   const url = getProductShareUrl(productName);
 
@@ -9091,7 +9133,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     if(!items.length){ alert('請先加入商品');return; }
     setCheckoutView(form.hidden);toggleFields();
     document.getElementById('checkoutSummary').innerHTML = createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();
-    if(!form.hidden) form.scrollIntoView({behavior:'smooth',block:'start'});
+    if(!form.hidden){qeTrack_('begin_checkout',{currency:'TWD',items:items.map(qeAnalyticsItem_)});form.scrollIntoView({behavior:'smooth',block:'start'});}
   });
   panel.addEventListener('change',function(){if(!form.hidden){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();}});
   panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();},0);});
@@ -9337,7 +9379,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
   }
   function promptLine(title,text){
     var prompt=title+'\n\n以下內容會帶到 QUEENA SELECT 官方 LINE：\n'+text+'\n\n按「確定」前往官方客服\n進入客服後，請按「送出」傳送文字，我會盡快與您聯絡，謝謝。';
-    if(window.confirm(prompt))window.location.href=oaUrl(text);
+    if(window.confirm(prompt)){qeTrack_('contact_line',{contact_method:'LINE'});window.location.href=oaUrl(text);}
   }
   function askProduct(name){var n=String(name||'').trim();promptLine('詢問商品',n?'您好，我想了解以下商品：\n1. '+n+'\n\n請提供商品資訊，謝謝。':GENERIC);}
   if(typeof queenaAskOfficialLine_==='function')queenaAskOfficialLine_=askProduct;
