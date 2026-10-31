@@ -4726,7 +4726,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
 
       <p class="heroSub">
         喜歡的商品先加入購物車，再選擇結帳方式<br>
-        可選「自助快速下單」，也可選「客服協助下單」
+        可選「立即下單」，也可選「請客服協助訂購」
       </p>
 
       <div class="heroAction">
@@ -4886,7 +4886,7 @@ html[data-queena-share="1"] #queenaHomeEntry{
     </div>
 
     <button id="sendBtn" class="actionBtn lineBtn">
-      客服協助下單
+      請客服協助訂購
     </button>
 
 
@@ -5079,7 +5079,7 @@ async function queenaFetchTimed_(url, options){
     const text=await response.text();
     return {ok:response.ok,status:response.status,text:async function(){return text;}};
   }catch(err){
-    if(err.name==='AbortError') throw new Error(options.method==='POST' ? '送單等待逾時，結果尚未確認；請先聯絡官方客服確認' : '連線等待逾時，請再試一次或使用自助快速下單');
+    if(err.name==='AbortError') throw new Error(options.method==='POST' ? '送單等待逾時，結果尚未確認；請先聯絡官方客服確認' : '連線等待逾時，請再試一次或使用立即下單');
     throw err;
   }finally{clearTimeout(timeout);}
 }
@@ -6123,11 +6123,11 @@ function renderCartPanelLegacy_(){
 
             '<button type="button" class="intentBtn buyBtn ' +
               (item.intent === 'buy' ? 'active' : '') +
-            '">🛒 我要買</button>' +
+            '">🛒 訂購此商品</button>' +
 
             '<button type="button" class="intentBtn askBtn ' +
               (item.intent === 'ask' ? 'active' : '') +
-            '">💬 詢問客服此商品</button>' +
+            '">💬 詢問商品</button>' +
 
           '</div>' +
 
@@ -6448,7 +6448,7 @@ function createMessage(includeMoney){
       couponHtml;
   }
 
-  const promoHtml = '<div class="orderConfirmPromo">可選「自助快速下單」，也可選「客服協助下單」</div>';
+  const promoHtml = '<div class="orderConfirmPromo">可選「立即下單」，也可選「請客服協助訂購」</div>';
 
   return (
     '<div class="orderConfirmBox">' +
@@ -6682,7 +6682,7 @@ function startFullLineLogin_(items){
       const box=document.getElementById('lineFriendPrompt');
       if(box){box.innerHTML='';const a=document.createElement('a');a.href=loginUrl.href;a.textContent='💚 點此繼續 LINE 身分確認';a.className='lineFriendAddBtn';box.appendChild(a);box.style.display='block';}
       sendBtn.disabled=false;
-      sendBtn.textContent='客服協助下單';
+      sendBtn.textContent='請客服協助訂購';
       window.location.assign(loginUrl.href);
 
     })
@@ -6690,10 +6690,10 @@ function startFullLineLogin_(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        '客服協助下單';
+        '請客服協助訂購';
 
       alert(
-        'LINE 確認暫時未完成：' + (err.message || String(err)) + '\n也可以選擇下方「自助快速下單」。'
+        'LINE 確認暫時未完成：' + (err.message || String(err)) + '\n也可以選擇下方「立即下單」。'
       );
 
     });
@@ -6758,7 +6758,7 @@ function submitWishlist(items){
 
       sendBtn.disabled = false;
       sendBtn.textContent =
-        '客服協助下單';
+        '請客服協助訂購';
 
       alert('訂單已送出。'+(data.notification && !data.notification.accepted ? 'LINE 自動通知尚未成功，請主動聯絡官方客服。':'請開啟下方 LINE 聯絡官方客服 確認訂單。'));
       showLineContactPrompt_();
@@ -6812,7 +6812,7 @@ function submitWishlist(items){
       if(/身分.*失效|重新確認/.test(String(err.message || ''))){lineProfile=null;queenaLocalStorage.removeItem('queenaLineRememberToken');}
       sendBtn.disabled = false;
       sendBtn.textContent =
-        '客服協助下單';
+        '請客服協助訂購';
 
       alert(
         '送出失敗：' +
@@ -6837,7 +6837,7 @@ function handleLineOrderReceipt_(profile){
   queenaLocalStorage.removeItem('queenaPendingSend');
   queenaSessionStorage.removeItem('queenaPendingSendBackup');
   pendingSubmitInFlight=false;wishlistSubmitting=false;queenaOrderInFlight=false;
-  sendBtn.disabled=false;sendBtn.textContent='客服協助下單';
+  sendBtn.disabled=false;sendBtn.textContent='請客服協助訂購';
   if(receipt.saved){
     ['queenaPendingCart','queenaWishlistRequestId','queenaWishlistFingerprint'].forEach(function(k){queenaLocalStorage.removeItem(k);});
     queenaSessionStorage.removeItem('queenaPendingCartBackup');
@@ -7220,9 +7220,9 @@ function openProductDetail(productName){
       specsHtml +
    
       '<div class="productDetailActions">' +
-        '<button type="button" id="productDetailBuy" class="productDetailBtn productDetailBuy">🛒 我要買</button>' +
-        '<button type="button" id="productDetailAsk" class="productDetailBtn productDetailAsk">💬 詢問客服此商品</button>' +
-        '<button type="button" id="productDetailShare" class="productDetailBtn productDetailShare">↗ 分享這項商品</button>' +
+        '<button type="button" id="productDetailBuy" class="productDetailBtn productDetailBuy">🛒 加入購物車</button>' +
+        '<button type="button" id="productDetailAsk" class="productDetailBtn productDetailAsk">💬 詢問商品</button>' +
+        '<button type="button" id="productDetailShare" class="productDetailBtn productDetailShare">↗ 分享商品</button>' +
       '</div>' +
     '</div>';
 
@@ -7290,7 +7290,7 @@ function addProductFromDetail(intent){
     showShareToast(
       intent === 'ask'
         ? '已加入購物車：想了解 ♡'
-        : '已加入購物車：我要買 ♡'
+        : '已加入購物車 ♡'
     );
   }
 }
@@ -8861,7 +8861,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   if(!panel || !clearButton) return;
   const wrap = document.createElement('section');
   wrap.id = 'checkoutSection';
-  wrap.innerHTML = `<button type="button" id="openCheckout" class="actionBtn" style="background:#725b4c;color:white">🛒 自助快速下單</button>
+  wrap.innerHTML = `<button type="button" id="openCheckout" class="actionBtn" style="background:#725b4c;color:white">🛒 立即下單</button>
   <form id="checkoutForm" novalidate hidden>
     <header class="checkoutIntro"><h3>填寫訂單資料</h3><p>結帳完成後 會盡快幫您出貨唷 </p></header>
     <fieldset class="checkoutCard"><legend><span>01</span> 聯絡資料</legend>
@@ -9069,7 +9069,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   function setCheckoutView(open){
     form.hidden=!open;messageBox.hidden=open;cartItems.hidden=open;sendBtn.hidden=open;clearButton.hidden=open;
     const prompt=document.getElementById('lineFriendPrompt');if(prompt)prompt.hidden=open;
-    document.getElementById('openCheckout').textContent=open?'← 返回購物車':'🛒 自助快速下單';
+    document.getElementById('openCheckout').textContent=open?'← 返回購物車':'🛒 立即下單';
   }
   document.getElementById('editCartFromCheckout').addEventListener('click',function(){
     setCheckoutView(false);
@@ -9330,7 +9330,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     if(!items.length)return GENERIC;
     var allAsk=items.every(function(x){return x.intent==='ask';});
     var allBuy=items.every(function(x){return x.intent!=='ask';});
-    var heading=allAsk?'您好，我想了解以下商品：':allBuy?'您好，想請官方客服協助下單：':'您好，想詢問以下商品：';
+    var heading=allAsk?'您好，我想了解以下商品：':allBuy?'您好，想請官方請客服協助訂購：':'您好，想詢問以下商品：';
     var lines=items.map(function(x,i){var intent=allAsk||allBuy?'':(x.intent==='ask'?'想了解：':'想訂購：');return (i+1)+'. '+intent+x.name+(x.spec?'｜'+x.spec:'')+' ×'+(Number(x.qty)||1);}).join('\n');
     var closing=allAsk?'\n\n請提供商品資訊，謝謝。':allBuy?'\n\n請協助確認優惠與後續方式，謝謝。':'\n\n請提供商品資訊或協助確認訂購方式，謝謝。';
     return heading+'\n'+lines+closing;
@@ -9355,16 +9355,16 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     if(t.id==='sendBtn'){
       var items=cartItems();if(!items.length){alert('請先把想詢問或訂購的商品加入購物車。');return;}
       if(typeof products!=='undefined'&&typeof queenaValidSpec_==='function'){var bad=items.find(function(x){var p=products.find(function(y){return y.name===x.name;})||{};return !Number.isSafeInteger(Number(x.qty))||Number(x.qty)<1||Number(x.qty)>99||!queenaValidSpec_(p,x.spec||'');});if(bad){alert('請先確認「'+bad.name+'」的規格與數量。');return;}}
-      promptLine(items.every(function(x){return x.intent==='ask';})?'確認商品詢問':items.every(function(x){return x.intent!=='ask';})?'確認客服協助下單':'確認商品需求',cartText(items));return;
+      promptLine(items.every(function(x){return x.intent==='ask';})?'確認商品詢問':items.every(function(x){return x.intent!=='ask';})?'確認請客服協助訂購':'確認商品需求',cartText(items));return;
     }
     if(t.classList.contains('askBtn')){var row=t.closest('.cartItem');askProduct(row&&row.querySelector('.cartName')?row.querySelector('.cartName').textContent:(typeof activeDetailProductName!=='undefined'?activeDetailProductName:''));return;}
     if(t.matches('[data-qe-info="contact"]')){promptLine('聯絡官方客服',GENERIC);return;}
-    if(t.matches('[data-qe-mode="line"]')){var selected=cartItems();promptLine(selected.length?(selected.every(function(x){return x.intent==='ask';})?'確認商品詢問':selected.every(function(x){return x.intent!=='ask';})?'確認客服協助下單':'確認商品需求'):'聯絡官方客服',selected.length?cartText(selected):GENERIC);return;}
+    if(t.matches('[data-qe-mode="line"]')){var selected=cartItems();promptLine(selected.length?(selected.every(function(x){return x.intent==='ask';})?'確認商品詢問':selected.every(function(x){return x.intent!=='ask';})?'確認請客服協助訂購':'確認商品需求'):'聯絡官方客服',selected.length?cartText(selected):GENERIC);return;}
     promptLine(t.classList.contains('checkoutLineLink')?'聯絡官方 LINE':'前往官方 LINE',anchorText(t));
   },true);
   function update(){
-    var b=document.getElementById('sendBtn');if(b){b.textContent='客服協助下單';b.setAttribute('aria-label','客服協助下單，將購物車商品帶到官方 LINE');}
-    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='可選「自助快速下單」，也可選「客服協助下單」。';});
+    var b=document.getElementById('sendBtn');if(b){b.textContent='請客服協助訂購';b.setAttribute('aria-label','請客服協助訂購，將購物車商品帶到官方 LINE');}
+    document.querySelectorAll('.orderConfirmPromo').forEach(function(x){x.textContent='可選「立即下單」，也可選「請客服協助訂購」。';});
     document.querySelectorAll('#lineFriendPrompt').forEach(function(x){x.style.display='none';x.hidden=true;});
     document.querySelectorAll('.checkoutLineLink').forEach(function(x){x.textContent='📌透過 QUEENA SELECT 官方 LINE 詢問';});
     normalize(document);
@@ -9398,7 +9398,7 @@ function currentId(){const m=location.hash.match(/^#notebook(?:\/(.*))?$/);if(!m
 function load(){if(loaded)return Promise.resolve();if(loading)return loading;loading=new Promise(function(resolve,reject){const cb='qnbCallback_'+Date.now()+'_'+Math.random().toString(36).slice(2),script=document.createElement('script');let done=false;const timer=setTimeout(function(){finish(new Error('讀取筆記等待逾時，請重新載入。'));},25000);function finish(err,data){if(done)return;done=true;clearTimeout(timer);script.remove();window[cb]=function(){};setTimeout(function(){delete window[cb];},30000);if(err){reject(err);return;}notes=data.notes.filter(function(n){return n&&n.id&&n.title;});loaded=true;resolve();}window[cb]=function(data){if(!data||data.success!==true||!Array.isArray(data.notes)){finish(new Error(data&&data.message||'筆記資料格式不正確，請確認 GAS 已更新部署。'));return;}finish(null,data);};script.onerror=function(){finish(new Error('筆記暫時連不上，請稍後重試。'));};script.src=ENDPOINT+'?api=notebook&callback='+cb+'&_cb='+Date.now();document.head.appendChild(script);}).finally(function(){loading=null;});return loading;}
 async function open(id){if(!opened){lastFocus=document.activeElement;oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';opened=true;}app.hidden=false;showState('正在載入筆記…');try{await load();if(app.hidden)return;const target=currentId();if(target)article(target);else list();}catch(e){if(!app.hidden)showState(e.message,true);}}
 function resetScroll(){app.scrollTop=0;const heading=wrap.querySelector('h1');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}}
-function list(){wrap.replaceChildren();const header=el('header',null,'qnbHeading');header.append(el('h1','👑 Queena 開箱筆記'),el('p','幫你避雷的實測紀錄'));wrap.appendChild(header);const filters=el('div',null,'qnbFilters');filters.setAttribute('aria-label','筆記分類');const preferred=['保養日常','生活好物','美食分享','營養補給'];const extras=notes.map(function(n){return n.category||'其他';}).filter(function(c){return preferred.indexOf(c)<0;});const cats=['全部'].concat(preferred,Array.from(new Set(extras)));if(cats.indexOf(category)<0)category='全部';cats.forEach(function(c){const b=button(c,function(){category=c;list();},'');b.setAttribute('aria-pressed',String(category===c));filters.appendChild(b);});wrap.appendChild(filters);const items=notes.filter(function(n){return category==='全部'||(n.category||'其他')===category;});if(!items.length){const s=el('p',notes.length?'這個分類還沒有筆記，先看看其他分享吧 ♡':'筆記準備中，之後在這裡分享我的使用日常 ♡','qnbState');s.setAttribute('role','status');wrap.appendChild(s);}else{const grid=el('div',null,'qnbGrid');items.forEach(function(n){const card=el('article',null,'qnbCard'),cover=link('',noteHref(n.id),'qnbCover');cover.setAttribute('aria-label','閱讀：'+n.title);const img=photo(n.cover||(n.photos||[])[0],n.title);cover.appendChild(img||el('span','👑 開箱筆記','qnbPlaceholder'));if(safeUrl(n.video)){const play=el('span','▶','qnbPlay');play.setAttribute('aria-hidden','true');cover.appendChild(play);}const body=el('div',null,'qnbCardText'),h=el('h2');h.appendChild(link(n.title,noteHref(n.id)));body.append(el('span',n.category||'其他','qnbTag'),h,el('time',n.date||'','qnbDate'),el('p',(n.summary||n.content||'').slice(0,90)),link('閱讀筆記 →',noteHref(n.id),'qnbRead'));card.append(cover,body);grid.appendChild(card);});wrap.appendChild(grid);}wrap.appendChild(el('p','把真的用過、喜歡的日常，慢慢記下來。','qnbFooter'));resetScroll();}
+function list(){wrap.replaceChildren();const header=el('header',null,'qnbHeading');header.append(el('h1','👑 Queena 開箱筆記'),el('p','幫你避雷的實測紀錄'));wrap.appendChild(header);const filters=el('div',null,'qnbFilters');filters.setAttribute('aria-label','筆記分類');const preferred=['保養日常','生活好物','美食分享','營養補給'];const extras=notes.map(function(n){return n.category||'其他';}).filter(function(c){return preferred.indexOf(c)<0;});const cats=['全部'].concat(preferred,Array.from(new Set(extras)));if(cats.indexOf(category)<0)category='全部';cats.forEach(function(c){const b=button(c,function(){category=c;list();},'');b.setAttribute('aria-pressed',String(category===c));filters.appendChild(b);});wrap.appendChild(filters);const items=notes.filter(function(n){return category==='全部'||(n.category||'其他')===category;});if(!items.length){const s=el('p',notes.length?'這個分類還沒有筆記，先看看其他分享吧 ♡':'筆記準備中，之後在這裡分享我的使用日常 ♡','qnbState');s.setAttribute('role','status');wrap.appendChild(s);}else{const grid=el('div',null,'qnbGrid');items.forEach(function(n){const card=el('article',null,'qnbCard'),cover=link('',noteHref(n.id),'qnbCover');cover.setAttribute('aria-label','閱讀：'+n.title);const img=photo(n.cover||(n.photos||[])[0],n.title);cover.appendChild(img||el('span','👑 懶人筆記','qnbPlaceholder'));if(safeUrl(n.video)){const play=el('span','▶','qnbPlay');play.setAttribute('aria-hidden','true');cover.appendChild(play);}const body=el('div',null,'qnbCardText'),h=el('h2');h.appendChild(link(n.title,noteHref(n.id)));body.append(el('span',n.category||'其他','qnbTag'),h,el('time',n.date||'','qnbDate'),el('p',(n.summary||n.content||'').slice(0,90)),link('閱讀筆記 →',noteHref(n.id),'qnbRead'));card.append(cover,body);grid.appendChild(card);});wrap.appendChild(grid);}wrap.appendChild(el('p','把真的用過、喜歡的日常，慢慢記下來。','qnbFooter'));resetScroll();}
 function media(raw){const url=safeUrl(raw);if(!url)return null;const u=new URL(url),box=el('div',null,'qnbMedia');let src='',label='開啟影片',wide=false;
  if(/^(www\.)?instagram\.com$/.test(u.hostname)){const m=u.pathname.match(/^\/(?:reel|p|tv)\/([A-Za-z0-9_-]+)\/?$/);if(m){src='https://www.instagram.com/'+u.pathname.split('/')[1]+'/'+m[1]+'/embed/';label='到 IG 看完整影片';}}
  else if(/^(www\.|m\.)?youtube\.com$/.test(u.hostname)||u.hostname==='youtu.be'){const id=u.hostname==='youtu.be'?u.pathname.slice(1):(u.searchParams.get('v')||(u.pathname.match(/^\/(?:shorts|embed)\/([\w-]+)/)||[])[1]);if(id&&/^[\w-]{11}$/.test(id)){src='https://www.youtube-nocookie.com/embed/'+id;wide=!u.pathname.startsWith('/shorts/');label='到 YouTube 觀看';}}
