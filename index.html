@@ -6371,23 +6371,31 @@ function queenaPromoInfo_(raw,now){
 function queenaPromoClean_(raw,info){
  return String(raw||'').replace(info.text,'').replace(/^[\s,，、｜|;；]+|[\s,，、｜|;；]+$/g,'').replace(/([｜|,，])\s*([｜|,，])/g,'$1').trim();
 }
-function queenaPromoRaise_(raw){
- const text=String(raw||'');
- if(/^\s*\d+(?:\.\d{1,2})?\s*$/.test(text))return String(Math.round((Number(text)+130)*100)/100);
- return text.replace(/((?:NT\$|NTD\s*|[$＄])\s*)(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi,function(_,prefix,n){return prefix+String(Math.round((Number(n.replace(/,/g,''))+130)*100)/100);});
+function queenaPromoRaise_(raw,allowBare){
+ if(allowBare!==false&&/^\s*\d+(?:,\d{3})*(?:\.\d{1,2})?\s*$/.test(String(raw||'')))return String(Math.round((Number(String(raw).replace(/,/g,''))+130)*100)/100);
+ const text=String(raw||'').replace(/(?:NT\$|NTD\s*|[$＄])\s*\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?/gi,function(v){return v.replace(/,/g,'\u0001');});
+ return text.split(/([｜|,，、\n\r;；])/).map(function(part){
+  part=part.replace(/\u0001/g,',');
+  // Freight settings, including zero-fee quantity offers, must stay unchanged.
+  if(/運費|運送費|[宅它]配費/.test(part)||queenaDeliveryMeta_(part))return part;
+  const raise=function(n){return String(Math.round((Number(n.replace(/,/g,''))+130)*100)/100);};
+  if(allowBare!==false&&/^\s*\d+(?:,\d{3})*(?:\.\d{1,2})?\s*元?\s*$/.test(part))return part.replace(/\d+(?:,\d{3})*(?:\.\d{1,2})?/,raise);
+  return part.replace(/((?:NT\$|NTD\s*|[$＄])\s*)(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi,function(_,prefix,n){return prefix+raise(n);});
+ }).join('');
 }
 function queenaPromoProduct_(product,now){
  if(!product||typeof product!=='object')return product;
- const rawSpecs=Object.prototype.hasOwnProperty.call(product,'qePromoRawSpecs')?product.qePromoRawSpecs:String(product.specs||'');
- const info=queenaPromoInfo_(rawSpecs,now);if(!info)return product;
- const rawPrice=Object.prototype.hasOwnProperty.call(product,'qePromoRawPrice')?product.qePromoRawPrice:String(product.price||'');
+ const rawSpecs=Object.prototype.hasOwnProperty.call(product,'qePromoRawSpecs')?String(product.qePromoRawSpecs):String(product.specs||'');
+ const rawPrice=Object.prototype.hasOwnProperty.call(product,'qePromoRawPrice')?String(product.qePromoRawPrice):String(product.price||'');
+ const info=queenaPromoInfo_(rawSpecs,now)||queenaPromoInfo_(rawPrice,now);if(!info)return product;
+ // Always derive from the original catalog values, including when a server-
+ // decorated product is processed again in the browser. Never add twice.
  const p=Object.assign({},product,{qePromoRawSpecs:rawSpecs,qePromoRawPrice:rawPrice,promoUntil:info.expired?'':info.date,promoExpiresAt:info.expiresAt});
  p.specs=queenaPromoClean_(rawSpecs,info);
- p.price=rawPrice;
- // 優惠到期僅結束日期標示，不自動變更商品價格。
- // 僅規格有售價、價格欄空白的既有商品，也顯示其完整組合價。
+ p.price=queenaPromoClean_(rawPrice,info);
+ if(info.expired){p.price=queenaPromoRaise_(p.price,true);p.specs=queenaPromoRaise_(p.specs,false);}
  if(!p.price.trim()){
-   p.price=p.specs.split(/[｜|,，、\n\r;；]/).filter(function(label){return /^\s*\d+\s*(?:盒|包|組|袋|瓶|套|件|顆|罐|入|隻|片|雙|條)\s*[$＄]\s*\d+(?:,\d{3})*(?:\.\d{1,2})?\s*$/.test(label);}).join('｜').trim();
+  p.price=queenaSpecOptions_(p.specs).filter(function(label){return /^\s*\d+\s*(?:盒|包|組|袋|瓶|套|件|顆|罐|入|隻|片|雙|條)\s*[$＄]\s*\d+(?:,\d{3})*(?:\.\d{1,2})?\s*$/.test(label);}).join('｜');
  }
  return p;
 }
