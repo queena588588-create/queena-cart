@@ -250,7 +250,7 @@ function replaceOrAddMeta(
     '">';
 
   return re.test(html)
-    ? html.replace(re, tag)
+    ? html.replace(re, () => tag)
     : html.replace(
         '</head>',
         '  ' + tag + '\n</head>'
@@ -270,7 +270,7 @@ function replaceCanonical(
     /<link\s+rel=["']canonical["'][^>]*>/i;
 
   return re.test(html)
-    ? html.replace(re, tag)
+    ? html.replace(re, () => tag)
     : html.replace(
         '</head>',
         '  ' + tag + '\n</head>'
@@ -298,6 +298,39 @@ function injectSeed(
     '</body>',
     seed + '</body>'
   );
+}
+
+
+// Each URL must describe its own page, including the initial server HTML.
+function replaceOrAddNamedMeta(html, name, content) {
+  const tag = '<meta name="' + escAttr(name) + '" content="' + escAttr(content) + '">';
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('<meta\\b(?=[^>]*\\bname\\s*=\\s*["\\\']' + escapedName + '["\\\'])[^>]*>', 'gi');
+  let found = false;
+  const out = html.replace(re, function(){ if(found) return ''; found = true; return tag; });
+  return found ? out : out.replace(/<\/head>/i, function(){ return tag + '\n</head>'; });
+}
+
+function productSummaryText(value) {
+  return String(value == null ? '' : value)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&(?:nbsp|amp|quot|lt|gt);/gi, function(s){
+      return ({'&nbsp;':' ', '&amp;':'&', '&quot;':'"', '&lt;':'<', '&gt;':'>'})[s.toLowerCase()];
+    })
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function productSearchDescription(product) {
+  const name = productSummaryText(product.name);
+  const intro = productSummaryText(product.intro);
+  const specs = productSummaryText(Array.isArray(product.specs) ? product.specs.join('、') : product.specs);
+  const detail = intro || (specs ? '規格／款式：' + specs : '查看商品介紹、規格與訂購資訊。');
+  const text = (name ? name + '。' : '') + detail;
+  const chars = Array.from(text);
+  return chars.length > 160 ? chars.slice(0, 159).join('') + '…' : text;
 }
 
 async function serveShopPage(
@@ -438,13 +471,17 @@ async function serveShopPage(
         String(product.row)
       );
 
-    const desc =
-      'Queena SELECT｜Queena 私心推薦 ♡';
+    const desc = productSearchDescription(product);
+
+    html = replaceOrAddNamedMeta(html, 'description', desc);
+    html = replaceOrAddNamedMeta(html, 'twitter:description', desc);
+    html = replaceOrAddNamedMeta(html, 'twitter:title', name);
+    html = replaceOrAddNamedMeta(html, 'twitter:image', image);
 
     html =
       html.replace(
         /<title>[\s\S]*?<\/title>/i,
-        '<title>' +
+        () => '<title>' +
           escAttr(name) +
           '</title>'
       );
