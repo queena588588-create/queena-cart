@@ -9423,8 +9423,21 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     return heading+'\n'+lines+closing;
   }
   function promptLine(title,text){
-    var prompt=title+'\n\n以下內容會帶到 QUEENA SELECT 官方 LINE：\n'+text+'\n\n按「確定」前往官方客服\n進入客服後，請按「送出」傳送文字，我會盡快與您聯絡，謝謝。';
-    if(window.confirm(prompt)){qeTrack_('contact_line',{contact_method:'LINE'});window.location.href=oaUrl(text);}
+    var previous=document.getElementById('qeOfficialLineDialog');if(previous)previous.close();
+    var dialog=document.createElement('dialog');dialog.id='qeOfficialLineDialog';
+    dialog.setAttribute('aria-labelledby','qeOfficialLineTitle');
+    dialog.style.cssText='width:min(460px,calc(100% - 32px));max-height:85dvh;box-sizing:border-box;border:1px solid #eadbd4;border-radius:22px;padding:24px;background:#fffaf7;color:#503b32;box-shadow:0 16px 60px #0003;overflow:auto;';
+    var heading=document.createElement('h2');heading.id='qeOfficialLineTitle';heading.textContent=title;heading.style.cssText='font-size:20px;margin:0 0 16px;';
+    var preview=document.createElement('p');preview.textContent=text;preview.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;margin:0 0 20px;';
+    var join=document.createElement('button');join.type='button';join.textContent='加入 LINE 官方帳號';join.style.cssText='display:block;width:100%;border:0;border-radius:14px;padding:16px;background:#06c755;color:#fff;font-size:18px;font-weight:700;cursor:pointer;';
+    var note=document.createElement('p');note.textContent='已自動幫你打好關鍵字，在 LINE 按「傳送」就好。';note.style.cssText='font-size:13px;line-height:1.6;color:#796b64;margin:10px 0 16px;';
+    var cancel=document.createElement('button');cancel.type='button';cancel.textContent='取消';cancel.style.cssText='display:block;margin:0 auto;border:0;background:transparent;color:#796b64;padding:8px 20px;cursor:pointer;';
+    var lastFocus=document.activeElement;
+    dialog.append(heading,preview,join,note,cancel);document.body.appendChild(dialog);
+    dialog.addEventListener('close',function(){dialog.remove();if(lastFocus&&lastFocus.isConnected)lastFocus.focus();},{once:true});
+    cancel.addEventListener('click',function(){dialog.close();});
+    join.addEventListener('click',function(){if(typeof qeTrack_==='function')qeTrack_('contact_line',{contact_method:'LINE'});dialog.close();window.location.href=oaUrl(text);});
+    dialog.showModal();join.focus();
   }
   function askProduct(name){var n=String(name||'').trim();promptLine('詢問商品',n?'您好，我想了解以下商品：\n1. '+n+'\n\n請提供商品資訊，謝謝。':GENERIC);}
   if(typeof queenaAskOfficialLine_==='function')queenaAskOfficialLine_=askProduct;
