@@ -5556,9 +5556,9 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
         '</div>' +
 
         (
-          p.intro
+          p.websiteIntro
             ? '<div class="featuredCardIntro productDetailTrigger" title="查看完整介紹">' +
-                escapeHtml(p.intro) +
+                escapeHtml(p.websiteIntro) +
               '</div>'
             : ''
         ) +
@@ -5769,7 +5769,7 @@ function render(){
 
       const searchText = [
         p.name || '',
-        p.intro || '',
+        p.websiteIntro || '',
         p.keyword || '',
         p.category || '',
         p.specs || ''
@@ -5845,7 +5845,7 @@ function render(){
         '</div>' +
 
         '<div class="intro productDetailTrigger" title="查看完整介紹">' +
-          escapeHtml(p.intro || '') +
+          escapeHtml(p.websiteIntro || '') +
         '</div>' +
 
         priceHtml + queenaDeliveryHtml_(p) +
@@ -7271,17 +7271,14 @@ function openProductDetail(productName){
       '</div>'
     : '';
 
-  const introHtml = product.intro
+  const introHtml = product.websiteIntro
     ? '<div class="productDetailSection">' +
         '<div class="productDetailSectionTitle">商品介紹</div>' +
         '<div class="productDetailText">' +
-          mobileEscape(product.intro) +
+          mobileEscape(product.websiteIntro) +
         '</div>' +
       '</div>'
-    : '<div class="productDetailSection">' +
-        '<div class="productDetailSectionTitle">商品介紹</div>' +
-        '<div class="productDetailText">精選好物，想了解商品資訊可直接聯絡官方客服 ♡</div>' +
-      '</div>';
+    : '';
 
   const specsHtml = queenaProductOptions_(product).length
     ? '<div class="productDetailSection">' +
@@ -7445,9 +7442,9 @@ function mobileProductCard(p, badgeText){
       : '';
 
   const intro =
-    p.intro
+    p.websiteIntro
       ? '<div class="mProductIntro">' +
-        mobileEscape(p.intro) +
+        mobileEscape(p.websiteIntro) +
         '</div>'
       : '';
 
@@ -7706,7 +7703,7 @@ function mobileFilterResult(){
 
     const text = [
       p.name || '',
-      p.intro || '',
+      p.websiteIntro || '',
       p.keyword || '',
       p.category || ''
     ].join(' ').toLowerCase();
@@ -8032,7 +8029,7 @@ function getProductShareUrl(productName){
       matchedProduct.row,
       matchedProduct.name,
       matchedProduct.photo || matchedProduct.image || '',
-      matchedProduct.intro || '',
+      matchedProduct.websiteIntro || '',
       matchedProduct.price || ''
     ].join('|');
 
