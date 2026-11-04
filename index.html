@@ -6046,6 +6046,9 @@ function queenaValidSpec_(p,spec){
    if(!prices.some(function(x){return x.label===parts[0];}))return false;
    return opts.length ? parts.length===2 && opts.indexOf(parts[1])>=0 : parts.length===1;
  }
+ if(prices.length===1&&!opts.length){
+   return !spec||spec===prices[0].label;
+ }
  return opts.length?opts.indexOf(spec)>=0:!spec;
 }
 function queenaPriceChoices_(p){return queenaSpecOptions_(p&&p.price).filter(function(s){return !queenaDeliveryMeta_(s);}).map(function(label){const m=label.match(/^(.*?)\s*[$＄]\s*(\d[\d,]*(?:\.\d{1,2})?)$/);return m?{label:label,amount:Number(m[2].replace(/,/g,''))}:null;}).filter(Boolean);}
@@ -6430,7 +6433,12 @@ function queenaPriceValue_(basePrice, selectedSpec){
   const bundle=spec.match(/^\d+\s*(?:盒|包|組|袋|瓶|套|件|顆|罐|入)\s*(?:[:：=]\s*)?[$＄]?\s*(\d{2,}(?:,\d{3})*(?:\.\d{1,2})?)\s*元?$/);
   if(bundle)return Number(bundle[1].replace(/,/g,''));
   const price=String(basePrice||'').replace(/,/g,'').trim().match(/^(?:NT\$|NTD|[$＄])?\s*(\d+(?:\.\d+)?)$/i);
-  return price?Number(price[1]):null;
+  if(price)return Number(price[1]);
+  const labels=queenaSpecOptions_(basePrice);
+  if(labels.length===1&&!queenaDeliveryMeta_(labels[0])){
+    return queenaAbsoluteVariantPrice_(labels[0]);
+  }
+  return null;
 }
 function parseQueenaPrice_(raw, selectedSpec){return {text:String(raw || '').trim(),amount:queenaPriceValue_(raw,selectedSpec)};}
 
