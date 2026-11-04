@@ -5556,9 +5556,9 @@ function renderFeaturedGroup(gridEl,countEl,items,emptyText){
         '</div>' +
 
         (
-          p.intro
+          p.websiteIntro
             ? '<div class="featuredCardIntro productDetailTrigger" title="查看完整介紹">' +
-                escapeHtml(p.intro) +
+                escapeHtml(p.websiteIntro) +
               '</div>'
             : ''
         ) +
@@ -5769,7 +5769,7 @@ function render(){
 
       const searchText = [
         p.name || '',
-        p.intro || '',
+        p.websiteIntro || '',
         p.keyword || '',
         p.category || '',
         p.specs || ''
@@ -5845,7 +5845,7 @@ function render(){
         '</div>' +
 
         '<div class="intro productDetailTrigger" title="查看完整介紹">' +
-          escapeHtml(p.intro || '') +
+          escapeHtml(p.websiteIntro || '') +
         '</div>' +
 
         priceHtml + queenaDeliveryHtml_(p) +
@@ -7271,17 +7271,14 @@ function openProductDetail(productName){
       '</div>'
     : '';
 
-  const introHtml = product.intro
+  const introHtml = product.websiteIntro
     ? '<div class="productDetailSection">' +
         '<div class="productDetailSectionTitle">商品介紹</div>' +
         '<div class="productDetailText">' +
-          mobileEscape(product.intro) +
+          mobileEscape(product.websiteIntro) +
         '</div>' +
       '</div>'
-    : '<div class="productDetailSection">' +
-        '<div class="productDetailSectionTitle">商品介紹</div>' +
-        '<div class="productDetailText">精選好物，想了解商品資訊可直接聯絡官方客服 ♡</div>' +
-      '</div>';
+    : '';
 
   const specsHtml = queenaProductOptions_(product).length
     ? '<div class="productDetailSection">' +
@@ -7445,9 +7442,9 @@ function mobileProductCard(p, badgeText){
       : '';
 
   const intro =
-    p.intro
+    p.websiteIntro
       ? '<div class="mProductIntro">' +
-        mobileEscape(p.intro) +
+        mobileEscape(p.websiteIntro) +
         '</div>'
       : '';
 
@@ -7706,7 +7703,7 @@ function mobileFilterResult(){
 
     const text = [
       p.name || '',
-      p.intro || '',
+      p.websiteIntro || '',
       p.keyword || '',
       p.category || ''
     ].join(' ').toLowerCase();
@@ -8032,7 +8029,7 @@ function getProductShareUrl(productName){
       matchedProduct.row,
       matchedProduct.name,
       matchedProduct.photo || matchedProduct.image || '',
-      matchedProduct.intro || '',
+      matchedProduct.websiteIntro || '',
       matchedProduct.price || ''
     ].join('|');
 
@@ -8043,9 +8040,18 @@ function getProductShareUrl(productName){
     }
     var version = (hash >>> 0).toString(36);
 
-    return 'https://queena.tw' +
-      '/p/' + encodeURIComponent(String(matchedProduct.row).trim()) +
-      '?v=' + encodeURIComponent(version);
+    // 沿用 W 欄的既有分享網址，禁止以目前列號重建網址。
+    var storedShare = String(matchedProduct.shareUrl || '').trim();
+    try {
+      var stableUrl = new URL(storedShare);
+      if (/^(www\.)?queena\.tw$/.test(stableUrl.hostname) && /^\/p\/\d+\/?$/.test(stableUrl.pathname)) {
+        stableUrl.protocol = 'https:';
+        stableUrl.hostname = 'queena.tw';
+        stableUrl.searchParams.set('v', version);
+        return stableUrl.toString();
+      }
+    } catch(e) {}
+    return 'https://queena.tw/?product=' + encodeURIComponent(targetName) + '&v=' + encodeURIComponent(version);
   }
 
   // 舊資料沒有 row 時才退回舊格式，避免分享功能失效。
@@ -8362,6 +8368,12 @@ function openSharedQueenaProduct(){
       }
 
     },150);
+  }
+
+  // Worker 已依 W 欄解析舊網址；先用解析後的商品，網址列不必改動。
+  if(typeof window.__queenaResolvedShareName==='string' && window.__queenaResolvedShareName.trim()){
+    applySharedProduct({ name: window.__queenaResolvedShareName });
+    return;
   }
 
   // 新版短網址：/p/143
@@ -9417,7 +9429,7 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     if(!items.length)return GENERIC;
     var allAsk=items.every(function(x){return x.intent==='ask';});
     var allBuy=items.every(function(x){return x.intent!=='ask';});
-    var heading=allAsk?'您好，我想了解以下商品：':allBuy?'您好，想請官方請客服協助訂購：':'您好，想詢問以下商品：';
+    var heading=allAsk?'您好，我想了解以下商品：':allBuy?'您好，我想請客服協助下單：':'您好，想詢問以下商品：';
     var lines=items.map(function(x,i){var intent=allAsk||allBuy?'':(x.intent==='ask'?'想了解：':'想訂購：');return (i+1)+'. '+intent+x.name+(x.spec?'｜'+x.spec:'')+' ×'+(Number(x.qty)||1);}).join('\n');
     var closing=allAsk?'\n\n請提供商品資訊，謝謝。':allBuy?'\n\n請協助確認優惠與後續方式，謝謝。':'\n\n請提供商品資訊或協助確認訂購方式，謝謝。';
     return heading+'\n'+lines+closing;
@@ -9455,11 +9467,11 @@ if(new URLSearchParams(location.search).get('manage')==='orders'&&!new URLSearch
     if(t.id==='sendBtn'){
       var items=cartItems();if(!items.length){alert('請先把想詢問或訂購的商品加入購物車。');return;}
       if(typeof products!=='undefined'&&typeof queenaValidSpec_==='function'){var bad=items.find(function(x){var p=products.find(function(y){return y.name===x.name;})||{};return !Number.isSafeInteger(Number(x.qty))||Number(x.qty)<1||Number(x.qty)>99||!queenaValidSpec_(p,x.spec||'');});if(bad){alert('請先確認「'+bad.name+'」的規格與數量。');return;}}
-      promptLine(items.every(function(x){return x.intent==='ask';})?'確認商品詢問':items.every(function(x){return x.intent!=='ask';})?'確認請客服協助訂購':'確認商品需求',cartText(items));return;
+      promptLine(items.every(function(x){return x.intent==='ask';})?'確認商品詢問':items.every(function(x){return x.intent!=='ask';})?'確認客服協助下單':'確認商品需求',cartText(items));return;
     }
     if(t.classList.contains('askBtn')){var row=t.closest('.cartItem');askProduct(row&&row.querySelector('.cartName')?row.querySelector('.cartName').textContent:(typeof activeDetailProductName!=='undefined'?activeDetailProductName:''));return;}
     if(t.matches('[data-qe-info="contact"]')){promptLine('聯絡官方客服',GENERIC);return;}
-    if(t.matches('[data-qe-mode="line"]')){var selected=cartItems();promptLine(selected.length?(selected.every(function(x){return x.intent==='ask';})?'確認商品詢問':selected.every(function(x){return x.intent!=='ask';})?'確認請客服協助訂購':'確認商品需求'):'聯絡官方客服',selected.length?cartText(selected):GENERIC);return;}
+    if(t.matches('[data-qe-mode="line"]')){var selected=cartItems();promptLine(selected.length?(selected.every(function(x){return x.intent==='ask';})?'確認商品詢問':selected.every(function(x){return x.intent!=='ask';})?'確認客服協助下單':'確認商品需求'):'聯絡官方客服',selected.length?cartText(selected):GENERIC);return;}
     promptLine(t.classList.contains('checkoutLineLink')?'聯絡官方 LINE':'前往官方 LINE',anchorText(t));
   },true);
   function update(){
