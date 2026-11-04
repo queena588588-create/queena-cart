@@ -4495,7 +4495,7 @@ html.shared-product-initial #queenaHomeEntry::after{
   try{
     var params = new URLSearchParams(window.location.search);
     var product = String(params.get('product') || '').trim();
-    var shortProduct = /^\/p\/\d+\/?$/.test(window.location.pathname || '');
+    var shortProduct = /^\/p\/[A-Za-z0-9_-]{1,80}\/?$/.test(window.location.pathname || '');
     if(product || shortProduct){
       document.documentElement.classList.add('shared-product-initial');
       document.documentElement.setAttribute('data-queena-share','1');
@@ -5439,7 +5439,7 @@ function applyQueenaProducts(data){
   var sharedProductRow = '';
   try{
     sharedProductParam = String(new URLSearchParams(window.location.search).get('product') || '').trim();
-    var rowMatch = String(window.location.pathname || '').match(/^\/p\/(\d+)\/?$/);
+    var rowMatch = String(window.location.pathname || '').match(/^\/p\/([A-Za-z0-9_-]{1,80})\/?$/);
     sharedProductRow = rowMatch ? rowMatch[1] : '';
   }catch(e){}
 
@@ -8018,7 +8018,7 @@ function getProductShareUrl(productName){
     }) || null;
   }catch(e){}
 
-  if(matchedProduct && matchedProduct.row !== undefined && matchedProduct.row !== null && String(matchedProduct.row).trim()){
+  if(matchedProduct){
     /*
       LINE 縮圖自動版本：
       版本由商品 row + 名稱 + 圖片 + 介紹 + 價格自動計算。
@@ -8026,7 +8026,7 @@ function getProductShareUrl(productName){
       不需要人工 v2、v3。
     */
     var signature = [
-      matchedProduct.row,
+      matchedProduct.productId || matchedProduct.shareUrl || targetName,
       matchedProduct.name,
       matchedProduct.photo || matchedProduct.image || '',
       matchedProduct.websiteIntro || '',
@@ -8041,10 +8041,14 @@ function getProductShareUrl(productName){
     var version = (hash >>> 0).toString(36);
 
     // 沿用 W 欄的既有分享網址，禁止以目前列號重建網址。
+    var permanentId = String(matchedProduct.productId || '').trim();
+    if(/^[A-Za-z0-9_-]{1,80}$/.test(permanentId) && matchedProduct.identityReady!==false){
+      return 'https://queena.tw/p/'+encodeURIComponent(permanentId)+'?v='+encodeURIComponent(version);
+    }
     var storedShare = String(matchedProduct.shareUrl || '').trim();
     try {
       var stableUrl = new URL(storedShare);
-      if (/^(www\.)?queena\.tw$/.test(stableUrl.hostname) && /^\/p\/\d+\/?$/.test(stableUrl.pathname)) {
+      if (/^(www\.)?queena\.tw$/.test(stableUrl.hostname) && /^\/p\/[A-Za-z0-9_-]{1,80}\/?$/.test(stableUrl.pathname)) {
         stableUrl.protocol = 'https:';
         stableUrl.hostname = 'queena.tw';
         stableUrl.searchParams.set('v', version);
@@ -8162,7 +8166,7 @@ function openSharedQueenaProduct(){
   function applySharedProduct(productRef){
 
     var ref = productRef || {};
-    var rowWanted = String(ref.row || '').trim();
+    var rowWanted = String(ref.id || ref.row || '').trim();
     var decoded = String(ref.name || '').trim();
 
     if(!rowWanted && !decoded) return;
@@ -8176,20 +8180,22 @@ function openSharedQueenaProduct(){
     var matched = [];
     if(rowWanted){
       matched = products.filter(function(p){
-        return String(p && p.row !== undefined ? p.row : '').trim() === rowWanted;
+        if(p.identityReady===false)return false;
+        var oldMatch=String(p.shareUrl||'').match(/\/p\/([A-Za-z0-9_-]{1,80})(?:[/?#]|$)/);
+        return String(p.productId||'')===rowWanted || (Array.isArray(p.shareIds)&&p.shareIds.indexOf(rowWanted)>=0) || (!p.productId&&oldMatch&&oldMatch[1]===rowWanted);
       });
     }else{
       var wantedName = normalizeSharedName_(decoded);
       matched = products.filter(function(p){
-        return normalizeSharedName_(p.name) === wantedName;
+        return normalizeSharedName_(p.name) === wantedName || (Array.isArray(p.shareNames)&&p.shareNames.some(function(name){return normalizeSharedName_(name)===wantedName;}));
       });
     }
 
-    if(matched.length){
+    if(matched.length===1){
       decoded = String(matched[0].name || '').trim();
     }
 
-    if(matched.length === 0){
+    if(matched.length !== 1){
       document.documentElement.classList.add('shared-product-mode');
       var entryMissing = document.getElementById('queenaHomeEntry');
       if(entryMissing) entryMissing.style.display = 'none';
@@ -8370,14 +8376,14 @@ function openSharedQueenaProduct(){
     },150);
   }
 
-  // Worker 已依 W 欄解析舊網址；先用解析後的商品，網址列不必改動。
-  if(typeof window.__queenaResolvedShareName==='string' && window.__queenaResolvedShareName.trim()){
-    applySharedProduct({ name: window.__queenaResolvedShareName });
+  // The server supplies the permanent ID. A renamed product keeps the same link.
+  if(window.__queenaResolvedShareTarget && window.__queenaResolvedShareTarget.id){
+    applySharedProduct({ id: window.__queenaResolvedShareTarget.id });
     return;
   }
 
   // 新版短網址：/p/143
-  var rowMatch = String(window.location.pathname || '').match(/^\/p\/(\d+)\/?$/);
+  var rowMatch = String(window.location.pathname || '').match(/^\/p\/([A-Za-z0-9_-]{1,80})\/?$/);
   if(rowMatch){
     applySharedProduct({ row: rowMatch[1] });
     return;
@@ -8623,7 +8629,7 @@ function openSharedQueenaProduct(){
     // 分享商品網址期間，首頁永遠不能蓋回來。
     try{
       var sharedParams = new URLSearchParams(window.location.search);
-      var shortShared = /^\/p\/\d+\/?$/.test(window.location.pathname || '');
+      var shortShared = /^\/p\/[A-Za-z0-9_-]{1,80}\/?$/.test(window.location.pathname || '');
       if(sharedParams.get('product') || shortShared){
         var sharedEntry = getEntry();
         if(sharedEntry) sharedEntry.style.display = 'none';
@@ -8670,7 +8676,7 @@ function openSharedQueenaProduct(){
     if(btn){
       btn.addEventListener('click', function(){
         var params = new URLSearchParams(window.location.search);
-        var shortShared = /^\/p\/\d+\/?$/.test(window.location.pathname || '');
+        var shortShared = /^\/p\/[A-Za-z0-9_-]{1,80}\/?$/.test(window.location.pathname || '');
         if(params.get('product') || shortShared){
           window.top.location.href = window.location.origin + '/';
           return;
