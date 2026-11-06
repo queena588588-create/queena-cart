@@ -5070,7 +5070,7 @@ async function initNoteLiff() {
   const hasDirectNote = !!(params.get('n') && params.get('a'));
   const hasLiffState = !!params.get('liff.state');
 
-  if(hasDirectNote || hasLiffState){
+  if(hasDirectNote || (hasLiffState && params.get('member')!=='checkout')){
     const gasNote =
       'https://script.google.com/macros/s/AKfycbz3cGUC6hsUJfhKJJ-kCznEaYtwiBKcTPpBO-EK40ZB7q0cp4sHjhUye-zN4p1bcQ8s/exec'
       + window.location.search;
@@ -9295,11 +9295,13 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     }
     payload.requestId = requestId;
     try{payload.orderAccessToken=window.qmPrepareOrderAccess(requestId);}catch(error){result.textContent=error.message;return;}
+    let memberContext=null;try{memberContext=window.qeMemberCheckoutContext?window.qeMemberCheckoutContext():null;}catch(error){result.textContent=error.message;return;}
     inFlight=true;queenaOrderInFlight=true;sendBtn.disabled=true; submit.disabled=true;submit.textContent='正在建立訂單…';result.textContent='';receiptActions.hidden=true;
     try{
       const data=await apiPost('checkout',payload);
       if(!data.saved || !data.orderId) throw new Error('尚未取得訂單儲存確認，請先聯絡官方客服確認');
       window.qmCompleteOrderAccess(requestId,data.orderId);
+      const memberMessage=window.qeMemberAfterCheckout?await window.qeMemberAfterCheckout(memberContext,data.orderId,payload.orderAccessToken):'';
       const receiptLines=['✅ 訂單已建立',data.orderId,'','商品小計：$'+Number(data.subtotal || 0).toLocaleString('zh-TW')+(data.hasUnpriced?'＋待確認商品':'')];
       if(data.discount)receiptLines.push('購物券：−$'+data.discount);
       (data.shipments||[]).forEach(function(g){receiptLines.push(g.method+'運費：'+(g.fee?'$'+g.fee:'免運'));receiptLines.push(g.method+'商品：'+g.items.map(function(i){return i.name+' ×'+i.qty;}).join('、'));});
@@ -9315,6 +9317,8 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       const receiptBody=document.createElement('div');receiptBody.textContent=receiptLines.slice(3).join('\n');result.appendChild(receiptBody);
       completedOrderId=data.orderId;completedBuyerPhone=payload.buyerPhone;
       receiptActions.hidden=false;
+      if(memberMessage){const memberNote=document.createElement('p');memberNote.textContent=memberMessage;result.appendChild(memberNote);}
+      if(window.qeMemberShowRetry)window.qeMemberShowRetry();
       transferForm.hidden=payload.payment!=='銀行轉帳';
       bankInfo.hidden=true;bankInfo.textContent='';if(countdownTimer)clearInterval(countdownTimer);
       if(payload.payment==='銀行轉帳'){
@@ -9411,13 +9415,13 @@ function contact(){const a=el('a','聯絡官方客服','qmBtn');a.href='https://
 function lookupLink(id,token){return location.origin+location.pathname+'#order_lookup='+encodeURIComponent(id+':'+token);}
 async function copy(text,s){try{await navigator.clipboard.writeText(text);s.textContent='已複製，請妥善保存，勿公開此查詢連結。';}catch(e){const a=el('textarea');a.value=text;a.readOnly=true;s.appendChild(a);a.select();s.textContent='此裝置無法自動複製，請長按以下連結：';const a2=el('textarea');a2.value=text;a2.readOnly=true;s.appendChild(a2);}}
 function addMoney(box,label,n,cls){const row=el('div',null,'qmMoney'+(cls?' '+cls:''));row.append(el('span',label),el('strong',money(n)));box.appendChild(row);}
-function phoneLookupForm(){
- const f=el('form',null,'qmCard'),label=el('label','訂購人手機號碼'),input=el('input');input.type='tel';input.inputMode='tel';input.name='lookupPhone';input.id='qmLookupPhone';input.placeholder='09 開頭，共 10 碼';input.pattern='09[0-9]{8}';input.maxLength=10;input.required=true;input.autocomplete='tel';label.appendChild(input);f.appendChild(el('h3','查詢我的訂單','qmSectionTitle'));f.appendChild(label);const b=el('button','查詢訂單','qmBtn primary');b.type='submit';f.appendChild(b);f.appendChild(el('p','請輸入訂購人手機號碼，即可查詢訂單明細、付款與出貨進度','qmHint'));const status=state(f);
- f.addEventListener('submit',async function(e){e.preventDefault();if(!f.reportValidity()||b.disabled)return;const seq=++customerSeq;b.disabled=true;status.textContent='正在查詢…';const summary=document.getElementById('qmLookupSummary');if(summary)summary.textContent='';body.querySelectorAll('.qmOrderCard').forEach(x=>x.remove());try{const data=await api('customerPhone',{phone:input.value.trim()});if(seq!==customerSeq||modal.hidden||title.textContent!=='我的訂單')return;status.textContent=data.orders.length?'找到 '+data.matched+' 筆訂單'+(data.matched>100?'，顯示最近 100 筆':'')+'。訂單相關問題或意見反應':'請聯絡官方客服。';data.orders.forEach(o=>customerCard(o,[]));}catch(err){if(seq===customerSeq)status.textContent=err.message;}finally{b.disabled=false;}});return f;
-}
-async function customerView(){const seq=++customerSeq;show('我的訂單');body.replaceChildren();body.appendChild(phoneLookupForm());const top=el('div',null,'qmActions');top.append(btn('查看我的近期訂單',customerView),contact());body.appendChild(top);const s=state(body);s.id='qmLookupSummary';const keys=readKeys();
- if(!keys.length){s.textContent='請輸入訂購人手機號碼查詢';return;}
- s.textContent='正在載入此瀏覽器保存的訂單…';try{const data=await api('customerList',{keys:keys});if(seq!==customerSeq||modal.hidden||title.textContent!=='我的訂單')return;s.textContent=data.orders.length?'以下為此瀏覽器保存的訂單，也可在上方輸入手機查詢。':'可在上方輸入訂購人手機查詢。若剛送出仍在處理中，請稍後再試。';data.orders.forEach(o=>{const k=keys.find(k=>k.orderId===o.orderId||k.requestId===o.requestId);if(k)k.orderId=o.orderId;});writeKeys(keys);data.orders.forEach(o=>customerCard(o,keys));}catch(e){if(seq===customerSeq)s.textContent='瀏覽器訂單暫時無法載入：'+e.message;}}
+async function customerView(){const seq=++customerSeq;show('我的訂單');body.replaceChildren();const top=el('div',null,'qmActions');top.append(btn('重新整理訂單',customerView),contact());body.appendChild(top);const s=state(body);s.id='qmLookupSummary';
+ try{const member=window.qeMemberOrders?await window.qeMemberOrders():null;if(seq!==customerSeq||modal.hidden)return;
+ if(member){s.textContent=member.orders.length?'以下為此 LINE 會員的訂單。':'目前沒有綁定此 LINE 帳號的訂單。舊訂單可聯絡官方客服取得查詢連結。';const keys=readKeys();member.orders.forEach(o=>{if(!keys.some(k=>k.orderId===o.orderId))o.canReport=false;customerCard(o,keys);});return;}
+ const keys=readKeys();if(!keys.length){s.textContent='目前沒有此瀏覽器保存的訂單；已登入會員的訂單可在 LINE 登入後查詢，舊訂單請聯絡官方客服。';const login=btn('LINE 登入',()=>{close();if(window.qeMemberLogin)window.qeMemberLogin();});body.appendChild(login);return;}
+ const data=await api('customerList',{keys:keys});if(seq!==customerSeq||modal.hidden)return;s.textContent=data.orders.length?'以下為此瀏覽器保存的訂單。':'目前查無訂單，請聯絡官方客服。';data.orders.forEach(o=>{const k=keys.find(k=>k.orderId===o.orderId||k.requestId===o.requestId);if(k)k.orderId=o.orderId;});writeKeys(keys);data.orders.forEach(o=>customerCard(o,keys));
+ }catch(e){if(seq===customerSeq)s.textContent=e.message;}}
+window.addEventListener('qeMemberChanged',function(){++customerSeq;body.replaceChildren();});
 
 function orderSection(parent,name){const section=el('section',null,'qmCard');section.appendChild(el('h3',name,'qmSectionTitle'));parent.appendChild(section);return section;}
 function customerCard(o,keys){const card=el('section',null,'qmOrderCard');
@@ -9635,5 +9639,64 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+
+<script>
+// QUEENA 會員結帳：與商品、價格、運費、付款及台灣配送判斷分開。
+(function(){
+'use strict';
+const form=document.getElementById('checkoutForm');if(!form)return;
+const fields=['buyerName','buyerPhone','receiver','phone','shipping','address','storeArea','storeName'];
+const ACTIVE='qeMemberActiveV1',DRAFT='qeMemberDraftV1';
+let identity=null,revision=0,sequence=0,working=false,initialized=false,config=null,pendingCommit=null;
+const box=document.createElement('section');box.className='checkoutCard qeMemberBox';
+box.innerHTML='<h4>會員登入</h4><button type="button" id="qeMemberLogin">LINE 登入</button><button type="button" id="qeMemberLogout" hidden>登出／更換帳號</button><p id="qeMemberStatus" role="status" aria-live="polite">登入後可帶入已保存的資料，也可直接填寫下單。</p><label class="checkoutCheck" id="qeMemberSaveRow" hidden><input type="checkbox" id="qeMemberSave">儲存為下次結帳使用的常用資料</label>';
+form.querySelector('.checkoutIntro').after(box);
+const login=box.querySelector('#qeMemberLogin'),logout=box.querySelector('#qeMemberLogout'),status=box.querySelector('#qeMemberStatus'),save=box.querySelector('#qeMemberSave'),saveRow=box.querySelector('#qeMemberSaveRow');
+const style=document.createElement('style');style.textContent='.qeMemberBox h4{font-size:18px;margin:0 0 12px}.qeMemberBox button{min-height:46px;padding:10px 18px;border:0;border-radius:10px;font:inherit;cursor:pointer}.qeMemberBox #qeMemberLogin{background:#06c755;color:white;width:100%;font-weight:700}.qeMemberBox #qeMemberLogout{background:#f4ebe5;color:#6d5950}.qeMemberBox p{margin-top:12px!important}.qeMemberBox button:disabled{opacity:.6}.qeMemberBox [hidden]{display:none!important}';document.head.appendChild(style);
+async function api(op,p){return apiPost('orderPortal',{dataJson:JSON.stringify(Object.assign({op:op},p||{}))});}
+function blocked(){return working||!!window.queenaOrderInFlight||(typeof queenaOrderInFlight!=='undefined'&&queenaOrderInFlight);}
+function clearFields(){fields.forEach(k=>{if(form.elements[k]&&k!=='shipping')form.elements[k].value='';});form.elements.sameReceiver.checked=true;save.checked=false;form.elements.sameReceiver.dispatchEvent(new Event('change',{bubbles:true}));}
+function clearOrderView(removeKeys){const body=document.getElementById('qmBody');if(body)body.replaceChildren();if(removeKeys)try{queenaLocalStorage.removeItem('queenaOrderAccessV1');queenaLocalStorage.removeItem('qeMemberOrderOwnerV1');}catch(e){};window.dispatchEvent(new Event('qeMemberChanged'));}
+function reset(){++sequence;identity=null;revision=0;save.checked=false;saveRow.hidden=true;logout.hidden=true;login.hidden=false;pendingCommit=null;const retryButton=document.getElementById('qeMemberRetry');if(retryButton)retryButton.hidden=true;sessionStorage.removeItem(ACTIVE);clearFields();clearOrderView(true);}
+function token(){if(!identity||!window.liff||!liff.isLoggedIn())throw new Error('請重新登入 LINE');const t=liff.getIDToken(),d=liff.getDecodedIDToken();if(!t||!d||d.sub!==identity.id||Number(d.exp)<=Date.now()/1000)throw new Error('LINE 登入已過期，請重新登入');return t;}
+async function init(){
+ if(!config)config=await api('memberConfig');if(!config.enabled)throw new Error('會員登入尚未啟用，目前仍可直接填寫資料下單。');
+ if(!window.liff)throw new Error('LINE 登入元件尚未載入，請稍後再試，或直接填寫下單。');
+ if(!initialized){await liff.init({liffId:config.liffId});initialized=true;}
+}
+function fill(profile){if(!profile)return;fields.forEach(k=>{const input=form.elements[k];if(input&&typeof profile[k]==='string'){if(input.tagName==='SELECT'&&!Array.from(input.options).some(o=>o.value===profile[k]))return;input.value=profile[k];}});form.elements.sameReceiver.checked=profile.sameReceiver===true;form.elements.shipping.dispatchEvent(new Event('change',{bubbles:true}));form.elements.sameReceiver.dispatchEvent(new Event('change',{bubbles:true}));}
+function draft(){const values={};fields.forEach(k=>values[k]=form.elements[k].value);values.sameReceiver=form.elements.sameReceiver.checked;sessionStorage.setItem(DRAFT,JSON.stringify({at:Date.now(),values:values,cart:cart}));}
+function restoreDraft(){let d;try{d=JSON.parse(sessionStorage.getItem(DRAFT)||'null');}catch(e){}sessionStorage.removeItem(DRAFT);if(!d||Date.now()-d.at>30*60*1000)return;fill(d.values);if(d.cart&&typeof d.cart==='object'&&!Array.isArray(d.cart)){cart=d.cart;renderCartPanel();}const view=document.getElementById('viewCart');if(view)view.click();/* 結帳仍需經原本台灣本島提醒，不跳過配送限制。 */}
+async function loadProfile(){
+ const seq=++sequence;identity=null;revision=0;clearFields();clearOrderView();saveRow.hidden=true;logout.hidden=true;login.hidden=false;
+ const idToken=liff.getIDToken();if(!idToken)throw new Error('LINE 未提供登入憑證，請確認已開啟 openid 權限');
+ const d=await api('memberProfile',{idToken:idToken});if(seq!==sequence)return;
+ const decoded=liff.getDecodedIDToken();if(!decoded||decoded.sub!==d.memberId)throw new Error('LINE 帳號已變更，請重新登入');
+ const previous=queenaLocalStorage.getItem('qeMemberOrderOwnerV1');if(previous&&previous!==d.memberId)clearOrderView(true);queenaLocalStorage.setItem('qeMemberOrderOwnerV1',d.memberId);identity={id:d.memberId};revision=d.revision;sessionStorage.setItem(ACTIVE,'1');fill(d.profile);save.checked=false;saveRow.hidden=false;logout.hidden=false;login.hidden=true;
+ status.textContent=d.profile?'已登入，已帶入常用資料；請確認本次收件資訊。':'已登入，請填寫資料；勾選保存後，下次可自動帶入。';window.dispatchEvent(new Event('qeMemberChanged'));
+}
+async function begin(){if(blocked())return;working=true;login.disabled=true;status.textContent='正在連接 LINE…';try{await init();if(!liff.isLoggedIn()){draft();const u=new URL(location.href);u.searchParams.set('member','checkout');u.hash='';liff.login({redirectUri:u.href});return;}await loadProfile();}catch(e){clearOrderView(true);status.textContent=e.message;}finally{working=false;login.disabled=false;}}
+login.addEventListener('click',begin);
+logout.addEventListener('click',function(){if(blocked())return;reset();sessionStorage.removeItem(DRAFT);try{if(initialized&&liff.isLoggedIn())liff.logout();}catch(e){}status.textContent='已登出，常用資料已清除。可重新登入其他帳號。';});
+window.qeMemberCheckoutContext=function(){if(!identity)return null;return {idToken:token(),memberId:identity.id,revision:revision,saveProfile:save.checked};};
+async function commit(context,orderId,orderToken){
+ if(!context)return '';const d=await api('memberCommit',{idToken:context.idToken,orderId:orderId,orderToken:orderToken,saveProfile:context.saveProfile,revision:context.revision});
+ if(identity&&identity.id===context.memberId&&d.profileSaved)revision=d.revision;
+ return d.conflict?d.message:(d.profileSaved?'會員常用資料已更新。':'訂單已綁定會員；常用資料未變更。');
+}
+window.qeMemberAfterCheckout=async function(context,orderId,orderToken){if(!context)return '';try{const message=await commit(context,orderId,orderToken);pendingCommit=null;return message;}catch(e){pendingCommit={context:context,orderId:orderId,orderToken:orderToken};return '訂單已成立；會員資料尚未同步：'+e.message+'。請按下方「重試會員同步」，不必重複下單。';}};
+const retry=document.createElement('button');retry.id='qeMemberRetry';retry.type='button';retry.textContent='重試會員同步';retry.className='actionBtn';retry.hidden=true;document.getElementById('checkoutReceiptActions').appendChild(retry);
+window.qeMemberShowRetry=function(){retry.hidden=!pendingCommit;};
+retry.addEventListener('click',async function(){if(!pendingCommit||working)return;working=true;retry.disabled=true;try{const p=pendingCommit;if(!identity||identity.id!==p.context.memberId)throw new Error('請先使用原下單的 LINE 帳號登入');p.context.idToken=token();const message=await commit(p.context,p.orderId,p.orderToken);pendingCommit=null;retry.hidden=true;status.textContent=message;}catch(e){clearOrderView(true);status.textContent=e.message;}finally{working=false;retry.disabled=false;}});
+window.qeMemberOrders=async function(){if(working)throw new Error('正在確認會員身分，請稍後重新整理訂單');if(!identity)return null;const id=identity.id,seq=sequence,d=await api('memberOrders',{idToken:token()});if(!identity||identity.id!==id||sequence!==seq)throw new Error('登入帳號已變更，請重新查詢');return d;};
+window.qeMemberLogin=begin;
+window.addEventListener('pageshow',function(e){if(e.persisted&&identity){reset();status.textContent='請重新登入，以確認目前帳號。';}});
+const returning=new URLSearchParams(location.search).get('member')==='checkout';
+if(returning||sessionStorage.getItem(ACTIVE)==='1'){
+ (async function(){working=true;try{await init();if(returning)restoreDraft();if(liff.isLoggedIn())await loadProfile();else{clearOrderView(true);sessionStorage.removeItem(ACTIVE);status.textContent='請按 LINE 登入，或直接填寫資料下單。';}}catch(e){clearOrderView(true);status.textContent=e.message;sessionStorage.removeItem(ACTIVE);}finally{working=false;if(returning){const u=new URL(location.href);u.searchParams.delete('member');u.searchParams.delete('liff.state');u.searchParams.delete('code');u.searchParams.delete('state');u.searchParams.delete('liffClientId');u.searchParams.delete('liffRedirectUri');history.replaceState(null,'',u.pathname+u.search+u.hash);}}})();
+}
+})();
+
+</script>
 </body>
 </html>
