@@ -8988,7 +8988,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
       <a class="checkoutLineLink" href="https://line.me/R/oaMessage/%40753hvrac/" target="_blank" rel="noopener noreferrer">📌聯絡 QUEENA SELECT 官方客服 ↗</a>
     </fieldset>
     <fieldset class="checkoutCard"><legend><span>02</span> 收件配送</legend>
-      <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option><option value="分開配送－7-11">分次出貨：宅配＋7-11</option><option value="分開配送－全家">分次出貨：宅配＋全家</option></select></label><p id="checkoutDeliveryHint" class="checkoutHint"></p><label id="splitShipmentsRow" class="checkoutCheck" hidden><input type="checkbox" name="splitShipments">我同意分次出貨（宅配＋超商取貨）</label>
+      <label>配送方式<select name="shipping"><option value="宅配">宅配</option><option value="7-11">7-11</option><option value="全家">全家</option><option value="分開配送－7-11">分次出貨：宅配＋7-11</option><option value="分開配送－全家">分次出貨：宅配＋全家</option></select></label><p id="checkoutDeliveryHint" class="checkoutHint"></p><p id="mainlandDeliveryWarning" class="checkoutHint" role="status" aria-live="polite" hidden></p><label id="splitShipmentsRow" class="checkoutCheck" hidden><input type="checkbox" name="splitShipments">我同意分次出貨（宅配＋超商取貨）</label>
       <label class="checkoutCheck"><input name="sameReceiver" type="checkbox" checked>收件人同訂購人</label>
       <div id="receiverFields" class="checkoutGrid" hidden>
         <label>收件人姓名<input name="receiver" required maxlength="40" autocomplete="shipping name" placeholder="請填收件人姓名"></label>
@@ -9083,6 +9083,15 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
 #bankTransferInfo{padding:14px;border:1px solid #eadfd8;border-radius:12px;background:#fffaf5;color:#604c40;line-height:1.8;font-size:14px}
 #bankTransferInfo[hidden]{display:none!important}
 #checkoutReceiptActions label{margin:0 0 10px}
+#queenaShippingReminder{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(42,31,26,.56)}
+#queenaShippingReminder[hidden]{display:none!important}
+#queenaShippingReminder .qeReminderCard{width:min(100%,390px);box-sizing:border-box;padding:28px 24px 22px;border:1px solid #eadfd8;border-radius:22px;background:#fffdfb;box-shadow:0 20px 60px rgba(45,31,22,.25);text-align:center;color:#51443d}
+#queenaShippingReminder .qeReminderIcon{font-size:34px;line-height:1;margin-bottom:12px}
+#queenaShippingReminder h3{margin:0 0 12px;font-size:22px;color:#634d40}
+#queenaShippingReminder p{margin:0 0 22px;font-size:16px;line-height:1.8;color:#70584c}
+#queenaShippingReminder button,#queenaShippingReminder a{display:flex;width:100%;box-sizing:border-box;min-height:48px;align-items:center;justify-content:center;border-radius:12px;font:inherit;font-size:15px;font-weight:700;text-decoration:none}
+#queenaShippingReminder .qeReminderContinue{border:0;background:#84695c;color:#fff}
+#queenaShippingReminder .qeReminderLine{margin-top:10px;border:1px solid #d9c7bc;background:#fff;color:#70584c}
 #overlay .cartPanel:has(#checkoutForm:not([hidden])){max-height:92dvh;max-height:min(92dvh,100%);padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 @media(min-width:600px){#checkoutForm .checkoutGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 @media(max-width:420px){#checkoutForm{padding-top:16px}#checkoutForm .checkoutIntro{margin-bottom:18px}#checkoutForm .checkoutCard{padding:14px 14px 17px;margin-bottom:14px}#checkoutForm h3{font-size:22px}#checkoutForm label{margin-bottom:13px}#checkoutForm .checkoutCheck{margin:14px 0;padding:11px 12px}}
@@ -9118,6 +9127,39 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     }catch(err){status.textContent='回報未送出：'+err.message;button.disabled=false;button.textContent='我已轉帳';}
   });
   let inFlight = false, requestId = '', lastPayload = '';
+  const queenaTaiwanMainlandAreas_=['台北市','臺北市','新北市','桃園市','台中市','臺中市','台南市','臺南市','高雄市','基隆市','新竹市','新竹縣','苗栗縣','彰化縣','南投縣','雲林縣','嘉義市','嘉義縣','屏東縣','宜蘭縣','花蓮縣','台東縣','臺東縣','台北縣','臺北縣','桃園縣','台中縣','臺中縣','台南縣','臺南縣','高雄縣'];
+  const queenaOffshoreTerms_=['澎湖','金門','連江','馬祖','南竿','北竿','莒光','東引','烏坵','綠島','蘭嶼','琉球','小琉球','龜山島','東沙','南沙','太平島'];
+  const queenaForeignTerms_=['new zealand','aotearoa','auckland','wellington','christchurch','overseas','international','紐西蘭','海外','國外','澳洲','美國','加拿大','日本','香港','澳門','新加坡'];
+  function queenaIsTaiwanMainlandAddress_(value){
+    let address=String(value||'').trim();
+    if(address.normalize)address=address.normalize('NFKC');
+    address=address.replace(/\s+/g,'').replace(/[，,、／/|]/g,'');
+    address=address.replace(/^(?:中華民國|台灣|臺灣|\d{3,6})/,'').replace(/^(?:中華民國|台灣|臺灣|\d{3,6})/,'');
+    const lower=address.toLowerCase();
+    if(!address||queenaOffshoreTerms_.some(function(term){return address.indexOf(term)>=0;})||queenaForeignTerms_.some(function(term){return lower.indexOf(term)>=0;}))return false;
+    return queenaTaiwanMainlandAreas_.some(function(area){return address.indexOf(area)===0;});
+  }
+  function queenaDeliveryAddressError_(){
+    const shipping=form.elements.shipping.value;
+    const hasHome=shipping==='宅配'||/^分開配送－/.test(shipping);
+    const hasStore=shipping!=='宅配';
+    const address=form.elements.address.value.trim(),storeArea=form.elements.storeArea.value.trim();
+    if(hasHome&&address&&!queenaIsTaiwanMainlandAddress_(address))return '宅配地址目前僅開放台灣本島。離島及海外地區，歡迎私訊官方帳號。';
+    if(hasStore&&storeArea&&!queenaIsTaiwanMainlandAddress_(storeArea))return '超商取貨目前僅開放台灣本島。離島及海外地區，歡迎私訊官方帳號。';
+    return '';
+  }
+  function syncMainlandDelivery(){
+    const warning=document.getElementById('mainlandDeliveryWarning');
+    if(!warning)return;
+    const error=queenaDeliveryAddressError_();
+    warning.hidden=!error;
+    warning.textContent=error;
+    if(error){submit.disabled=true;submit.textContent='目前無法配送此地址';}
+    else if(!inFlight&&!queenaOrderInFlight){submit.disabled=false;submit.textContent='確認並送出訂單';}
+  }
+  form.elements.address.addEventListener('input',syncMainlandDelivery);
+  form.elements.storeArea.addEventListener('input',syncMainlandDelivery);
+  form.elements.shipping.addEventListener('change',syncMainlandDelivery);
   function deliveryItems(){return queenaCartLines_().map(function(i){const p=products.find(function(p){return p.name===i.name;})||{};return Object.assign({},i,{spec:queenaCleanSelected_(i.spec)},queenaDeliveryRule_(p));});}
   function currentDeliveryPlan(){return queenaShippingPlan_(deliveryItems(),form.elements.shipping.value);}
   function syncDeliveryOptions(){
@@ -9142,6 +9184,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     form.elements.address.required = hasHome;
     form.elements.storeName.required = !home;
     form.elements.storeArea.required = !home;
+    syncMainlandDelivery();
     const paymentHint=document.getElementById('checkoutPaymentHint');
     paymentHint.hidden=false;
     paymentHint.textContent=form.elements.payment.value==='LINE Pay'?'LINE Pay：送出訂單後，將訂單編號傳給官方客服，取得付款資訊。':form.elements.payment.value==='貨到付款'?'超商取貨付款：取件時付款。':'銀行轉帳：送出訂單後查看付款資訊；匯款後請提供帳號末五碼。';
@@ -9199,17 +9242,35 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
     warning.hidden=!missing.length;
     warning.textContent=missing.length?'尚有商品未選規格：'+missing.map(function(item){return item.name;}).join('、')+'。請返回購物車選擇後再送出。':'';
   }
+  const shippingReminder=document.createElement('div');
+  shippingReminder.id='queenaShippingReminder';
+  shippingReminder.hidden=true;
+  shippingReminder.innerHTML='<section class="qeReminderCard" role="dialog" aria-modal="true" aria-labelledby="qeReminderTitle"><div class="qeReminderIcon" aria-hidden="true">📦</div><h3 id="qeReminderTitle">溫馨提醒</h3><p>本商城目前僅開放台灣本島下單<br>離島及海外地區，歡迎私訊官方帳號協助訂購</p><button type="button" class="qeReminderContinue" id="qeReminderContinue">我知道了，繼續結帳</button><a class="qeReminderLine" id="qeReminderLine" href="https://line.me/R/oaMessage/%40753hvrac/" target="_blank" rel="noopener noreferrer">私訊官方帳號</a></section>';
+  document.body.appendChild(shippingReminder);
+  function proceedToCheckout(items){
+    shippingReminder.hidden=true;
+    setCheckoutView(true);toggleFields();
+    document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();
+    qeTrack_('begin_checkout',{currency:'TWD',items:items.map(qeAnalyticsItem_)});
+    form.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  document.getElementById('qeReminderContinue').addEventListener('click',function(){proceedToCheckout(queenaCartLines_());});
+  document.getElementById('qeReminderLine').addEventListener('click',function(){shippingReminder.hidden=true;});
+  shippingReminder.addEventListener('click',function(event){if(event.target===shippingReminder)shippingReminder.hidden=true;});
+  document.addEventListener('keydown',function(event){if(event.key==='Escape'&&!shippingReminder.hidden)shippingReminder.hidden=true;});
   document.getElementById('openCheckout').addEventListener('click',function(){
-    const items = queenaCartLines_();
-    if(!items.length){ alert('請先加入商品');return; }
-    setCheckoutView(form.hidden);toggleFields();
-    document.getElementById('checkoutSummary').innerHTML = createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();
-    if(!form.hidden){qeTrack_('begin_checkout',{currency:'TWD',items:items.map(qeAnalyticsItem_)});form.scrollIntoView({behavior:'smooth',block:'start'});}
+    if(!form.hidden){setCheckoutView(false);renderCartPanel();return;}
+    const items=queenaCartLines_();
+    if(!items.length){alert('請先加入商品');return;}
+    shippingReminder.hidden=false;
+    document.getElementById('qeReminderContinue').focus();
   });
   panel.addEventListener('change',function(){if(!form.hidden){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();}});
   panel.addEventListener('click',function(){if(!form.hidden)setTimeout(function(){document.getElementById('checkoutSummary').innerHTML=createMessage(false);refreshCheckoutSpecWarning();refreshShippingSummary();},0);});
   form.addEventListener('submit',async function(event){
     event.preventDefault();
+    const deliveryError=queenaDeliveryAddressError_();
+    if(deliveryError){syncMainlandDelivery();result.textContent=deliveryError;return;}
     if(inFlight || queenaOrderInFlight)return;const beforeCatalog=JSON.stringify(products.map(function(p){return [p.name,p.price,p.specs];}));submit.disabled=true;result.textContent='正在確認最新商品資料與運費…';try{if(window.queenaRefreshProductData)await window.queenaRefreshProductData();}catch(err){result.textContent='無法確認最新商品資料，訂單尚未送出，請稍後重試。';submit.disabled=false;return;}submit.disabled=false;result.textContent='';if(beforeCatalog!==JSON.stringify(products.map(function(p){return [p.name,p.price,p.specs];}))){renderCartPanel();toggleFields();result.textContent='商品資料已更新，請重新核對規格、金額與配送方式後再送出。';return;}
     toggleFields();syncReceiver();
     if(inFlight || queenaOrderInFlight) return;
