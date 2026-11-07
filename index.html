@@ -9245,7 +9245,7 @@ html.shared-product-mode #queenaHomeEntry{display:none !important;}
   const shippingReminder=document.createElement('div');
   shippingReminder.id='queenaShippingReminder';
   shippingReminder.hidden=true;
-  shippingReminder.innerHTML='<section class="qeReminderCard" role="dialog" aria-modal="true" aria-labelledby="qeReminderTitle"><div class="qeReminderIcon" aria-hidden="true">📦</div><h3 id="qeReminderTitle">溫馨提醒</h3><p>本商城目前僅開放台灣本島下單<br>離島及海外地區，歡迎私訊官方帳號協助訂購</p><button type="button" class="qeReminderContinue" id="qeReminderContinue">我知道了，繼續結帳</button><a class="qeReminderLine" id="qeReminderLine" href="https://line.me/R/oaMessage/%40753hvrac/" target="_blank" rel="noopener noreferrer">私訊官方帳號</a></section>';
+  shippingReminder.innerHTML='<section class="qeReminderCard" role="dialog" aria-modal="true" aria-labelledby="qeReminderTitle"><div class="qeReminderIcon" aria-hidden="true">📦</div><h3 id="qeReminderTitle">溫馨提醒</h3><p>本商城目前僅開放台灣本島下單<br>離島及海外地區，歡迎私訊官方帳號協助訂購</p><p lang="en" class="qeReminderEnglish" style="font-size:12px;line-height:1.6;color:#7c7068;margin:12px 0 18px;text-align:left;overflow-wrap:anywhere">Online orders are currently available for delivery to Taiwan’s main island only. For delivery to outlying islands or overseas, please message our official LINE account for assistance.</p><button type="button" class="qeReminderContinue" id="qeReminderContinue">我知道了，繼續結帳</button><a class="qeReminderLine" id="qeReminderLine" href="https://line.me/R/oaMessage/%40753hvrac/" target="_blank" rel="noopener noreferrer">私訊官方帳號</a></section>';
   document.body.appendChild(shippingReminder);
   function proceedToCheckout(items){
     shippingReminder.hidden=true;
